@@ -20,7 +20,7 @@ An intelligent GitHub repository analysis agent built using Pydantic AI, capable
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/coleam00/ottomator-agents.git
+git clone https://github.com/alimoradi296/ottomator-agents/tree/feature/enhanced-github-agent)
 cd ottomator-agents/pydantic-github-agent
 ```
 
@@ -34,7 +34,8 @@ pip install -r requirements.txt
    - Edit `.env` with your API keys and preferences:
    ```env
    GITHUB_TOKEN=your_github_token  # Required for private repos
-   OPEN_ROUTER_API_KEY=your_openrouter_api_key
+   OPENAI_API_KEY=your_openrouter_api_key
+   OPEN_AI_BASE_URL=your_base_url_openai
    LLM_MODEL=your_chosen_model  # e.g., deepseek/deepseek-chat
    ```
 
@@ -45,7 +46,7 @@ pip install -r requirements.txt
 Run the command-line interface to interact with the GitHub analysis agent:
 
 ```bash
-python cli.py
+python github_agent_ai.py
 ```
 
 Example queries you can ask:
@@ -66,12 +67,11 @@ LLM_MODEL=deepseek/deepseek-chat  # Default model
 ### API Keys
 
 - **GitHub Token**: Generate a Personal Access Token from [GitHub Settings](https://github.com/settings/tokens)
-- **OpenRouter API Key**: Get your API key from [OpenRouter](https://openrouter.ai/)
+- ** API Key**: Get your API key from [OpenRouter](https://openrouter.ai/)
 
 ## Project Structure
 
 - `github_agent_ai.py`: Core agent implementation with GitHub API integration
-- `cli.py`: Command-line interface for interacting with the agent
 - `requirements.txt`: Project dependencies
 
 ## Error Handling
