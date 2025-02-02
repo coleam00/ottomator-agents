@@ -64,7 +64,7 @@ multidict==6.1.0
 mypy-extensions==1.0.0
 narwhals==1.21.1
 nltk==3.9.1
-numpy==2.2.1
+numpy==2.0.2
 openai==1.59.6
 opentelemetry-api==1.29.0
 opentelemetry-exporter-otlp-proto-common==1.29.0

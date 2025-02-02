@@ -18,13 +18,15 @@ load_dotenv()
 llm = os.getenv('LLM_MODEL', 'gpt-4o-mini')
 model = OpenAIModel(llm)
 
-logfire.configure(send_to_logfire='if-token-present')
+logfire.configure(send_to_logfire='if-token-present') # logging and monitoring for pydantic AI (research how to set up)
 
 @dataclass
+# dependencies you need to set up
 class PydanticAIDeps:
     supabase: Client
     openai_client: AsyncOpenAI
 
+# What tools it has, what rules for the agent, could become an agentive flow
 system_prompt = """
 You are an expert at Pydantic AI - a Python AI agent framework that you have access to all the documentation to,
 including examples, an API reference, and other resources to help you build Pydantic AI agents.
@@ -46,6 +48,7 @@ pydantic_ai_expert = Agent(
     retries=2
 )
 
+# Get embeddings
 async def get_embedding(text: str, openai_client: AsyncOpenAI) -> List[float]:
     """Get embedding vector from OpenAI."""
     try:
@@ -58,7 +61,8 @@ async def get_embedding(text: str, openai_client: AsyncOpenAI) -> List[float]:
         print(f"Error getting embedding: {e}")
         return [0] * 1536  # Return zero vector on error
 
-@pydantic_ai_expert.tool
+
+@pydantic_ai_expert.tool # A decorator to make the tool accessible to the agent
 async def retrieve_relevant_documentation(ctx: RunContext[PydanticAIDeps], user_query: str) -> str:
     """
     Retrieve relevant documentation chunks based on the query with RAG.
@@ -75,12 +79,13 @@ async def retrieve_relevant_documentation(ctx: RunContext[PydanticAIDeps], user_
         query_embedding = await get_embedding(user_query, ctx.deps.openai_client)
         
         # Query Supabase for relevant documents
+        # Could use Quadrant or another emedding tool that may be faster
         result = ctx.deps.supabase.rpc(
             'match_site_pages',
             {
                 'query_embedding': query_embedding,
                 'match_count': 5,
-                'filter': {'source': 'pydantic_ai_docs'}
+                'filter': {'source': 'pydantic_ai_docs'} # only pulling for data where the source is pydantic_ai_docs to not overlap
             }
         ).execute()
         
@@ -104,6 +109,7 @@ async def retrieve_relevant_documentation(ctx: RunContext[PydanticAIDeps], user_
         print(f"Error retrieving documentation: {e}")
         return f"Error retrieving documentation: {str(e)}"
 
+# go to site pages and pull the list of urls
 @pydantic_ai_expert.tool
 async def list_documentation_pages(ctx: RunContext[PydanticAIDeps]) -> List[str]:
     """
@@ -130,6 +136,7 @@ async def list_documentation_pages(ctx: RunContext[PydanticAIDeps]) -> List[str]
         print(f"Error retrieving documentation pages: {e}")
         return []
 
+# Pull the live content from the found url to read the whole page
 @pydantic_ai_expert.tool
 async def get_page_content(ctx: RunContext[PydanticAIDeps], url: str) -> str:
     """
