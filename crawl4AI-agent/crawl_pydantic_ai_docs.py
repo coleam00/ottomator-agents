@@ -80,6 +80,7 @@ def chunk_text(text: str, chunk_size: int = 5000) -> List[str]:
 
 async def get_title_and_summary(chunk: str, url: str) -> Dict[str, str]:
     """Extract title and summary using GPT-4."""
+    # System prompt to optimise
     system_prompt = """You are an AI that extracts titles and summaries from documentation chunks.
     Return a JSON object with 'title' and 'summary' keys.
     For the title: If this seems like the start of a document, extract its title. If it's a middle chunk, derive a descriptive title.
@@ -104,7 +105,7 @@ async def get_embedding(text: str) -> List[float]:
     """Get embedding vector from OpenAI."""
     try:
         response = await openai_client.embeddings.create(
-            model="text-embedding-3-small",
+            model="text-embedding-3-small", # OpenAI vector embedding tool
             input=text
         )
         return response.data[0].embedding
