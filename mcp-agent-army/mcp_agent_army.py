@@ -9,6 +9,12 @@ from rich.live import Live
 import asyncio
 import os
 
+# Import the listener
+from slack_bot_listener import SlackBotListener
+
+# Import the integration function
+from slack_integration import start_slack_integration
+
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.mcp import MCPServerStdio
@@ -222,8 +228,14 @@ async def use_firecrawl_agent(query: str) -> dict[str, str]:
 
 # ========== Main execution function ==========
 
+# --- Callback function for Slack Listener ---
+# [ This function is now moved to slack_integration.py ]
+# async def process_slack_message_for_agent(...): 
+#    ...
+# --- End Slack Callback ---
+
 async def main():
-    """Run the primary agent with a given query."""
+    """Run the primary agent with a given query and manage Slack listener."""
     print("MCP Agent Army - Multi-agent system using Model Context Protocol")
     print("Enter 'exit' to quit the program.")
     
@@ -268,6 +280,21 @@ async def main():
                 
             except Exception as e:
                 print(f"\n[Error] An error occurred: {str(e)}")
+
+            # --- Start Slack Bot Listener if Slack server initialized ---
+            if slack_server_started:
+                print("Slack MCP Server started. Initializing Slack Bot Listener...")
+                # Call the integration function from slack_integration.py
+                slack_listener, slack_listener_task = await start_slack_integration(
+                    agent=primary_agent,
+                    message_history=messages
+                )
+                if not slack_listener or not slack_listener_task:
+                    print("[Error] Slack integration failed to start. Listener will be unavailable.")
+                # Note: start_slack_integration handles its own internal errors and logging
+            else:
+                print("Slack MCP Server failed to start. Slack Bot Listener will not be activated.")
+            # ----------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
