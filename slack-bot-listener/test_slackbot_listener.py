@@ -12,6 +12,7 @@ Usage:
 """
 
 import os
+import sys
 import asyncio
 import logging
 import random
@@ -109,6 +110,11 @@ async def test_agent_callback(channel_id, message_text, user_id, thread_ts=None)
     logger.info(f"✅ MESSAGE RECEIVED: '{message_text}' from channel {channel_id}")
     valid_response_received = True
     
+    # Force immediate exit of the application
+    print("\n✅ TEST PASSED: Successfully received a message from Slack!")
+    await asyncio.sleep(1)  # Give a moment for logs to flush
+    sys.exit(0)  # Explicitly terminate the application
+    
     return True
 
 async def main():
@@ -155,6 +161,8 @@ async def main():
         for i in range(60):
             if valid_response_received:
                 print("\n✅ TEST PASSED: Successfully received a message from Slack!")
+                await slack_bot.stop()
+                sys.exit(0)  # Explicitly terminate the application
                 break
                 
             await asyncio.sleep(1)
@@ -167,12 +175,17 @@ async def main():
     
     except KeyboardInterrupt:
         print("\nTest interrupted by user")
+        sys.exit(0)
     except Exception as e:
         logger.error(f"Error in test: {e}", exc_info=True)
-    finally:
-        # Stop the bot
-        await slack_bot.stop()
-        print("\nTest completed. Slack bot stopped.")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nTest interrupted by user")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Unhandled exception: {e}", exc_info=True)
+        sys.exit(1) 
