@@ -44,6 +44,67 @@
     },
     {
       "parameters": {
+        "options": {
+          "model": "gpt-3.5-turbo"
+        }
+      },
+      "id": "7c3e6e8f-29a2-4f24-a4dd-88e4ac9e1273",
+      "name": "Model Selector",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        1480,
+        -60
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "05Q6PbnSdyEcu9Ze",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "21de7b96-2b1a-4c15-a319-ad4b0cbf6b37",
+              "name": "model_list",
+              "value": "={\n  \"models\": [\n    {\n      \"name\": \"gpt-3.5-turbo\",\n      \"strengths\": \"Fast responses, general knowledge, basic tasks, concise summaries\",\n      \"cost\": \"low\"\n    },\n    {\n      \"name\": \"gpt-4-turbo\",\n      \"strengths\": \"Complex reasoning, detailed analysis, instruction following, creative content\",\n      \"cost\": \"medium\"\n    },\n    {\n      \"name\": \"gpt-4o\",\n      \"strengths\": \"Cutting-edge reasoning, nuanced understanding, best accuracy, advanced coding\",\n      \"cost\": \"high\"\n    }\n  ]\n}",
+              "type": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3e7a12a2-f158-45ae-9b2d-0ef98ea6435d",
+      "name": "Set Model List",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1520,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'You are a model selector. Your job is to analyze the incoming query and select the most appropriate model for the task.\\n\\nAvailable models:\\n' + JSON.stringify($('Set Model List').item.json.model_list, null, 2) + '\\n\\nQuery: ' + $('Edit Fields').item.json.query + '\\n\\nInstructions:\\n1. Analyze the query to understand the complexity, domain, and requirements\\n2. Select the most suitable model based on its strengths\\n3. Rephrase the query to its shortest possible form while preserving all key information\\n4. Output in JSON format:\\n{\\n  \"selected_model\": \"[model name]\",\\n  \"selection_reason\": \"[brief reason for selection]\",\\n  \"rephrased_query\": \"[concise version of the query]\"\\n}' }}",
+        "options": {
+          "systemMessage": "You are a helpful AI that selects the optimal model for different types of queries."
+        }
+      },
+      "id": "c871f3ef-60a4-419b-9e99-7be3d79dc4b1",
+      "name": "Model Selector Agent",
+      "type": "@n8n/n8n-nodes-langchain.chain",
+      "typeVersion": 1.6,
+      "position": [
+        1700,
+        -60
+      ]
+    },
+    {
+      "parameters": {
         "respondWith": "allIncomingItems",
         "options": {
           "responseHeaders": {
@@ -327,24 +388,6 @@
     },
     {
       "parameters": {
-        "promptType": "define",
-        "text": "={{ $('Edit Fields').item.json.query }}",
-        "options": {
-          "systemMessage": "=You are an expert at researching the web to answer user questions that you can't answer yourself. You have access to the Brave API through a tool to do so. You give it a query and then it gives you back a summary of the articles found in from searching the web with the query you gave.\n\nNote: All queries you pass into the tool for web research most not have spaces. Instead you need to use plus signs. This is because the query will be used with the \"q\" parameter in a GET request.",
-          "maxIterations": 5
-        }
-      },
-      "id": "02f411a2-31f2-43ee-bb7e-10050018aaa7",
-      "name": "AI Agent",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1.6,
-      "position": [
-        1620,
-        -60
-      ]
-    },
-    {
-      "parameters": {
         "content": "# Advanced Web Researcher Agent\n\nAuthor: [Cole Medin](https://www.youtube.com/@ColeMedin)\n\nThis n8n-powered agent is an advanced web research assistant that leverages the Brave Search API to perform comprehensive online research. Unlike traditional web research tools, it uses Brave's powerful search capabilities combined with AI summarization to provide more accurate, detailed, and relevant information from across the web.\n\n## Features\n\n- Utilizes Brave Search API for high-quality search results\n- Automatically summarizes articles and web content\n- Provides comprehensive research summaries\n- Maintains source attribution\n- Filters and prioritizes relevant information\n- Handles complex research queries",
         "height": 441.41627906976817,
         "width": 651.0139534883727,
@@ -396,7 +439,45 @@
       "main": [
         [
           {
-            "node": "AI Agent",
+            "node": "Model Selector",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set Model List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model Selector": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Model Selector Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Model List": {
+      "main": [
+        [
+          {
+            "node": "Model Selector Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model Selector Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }

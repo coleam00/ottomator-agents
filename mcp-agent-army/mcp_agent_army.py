@@ -1,6 +1,6 @@
 from __future__ import annotations
 from contextlib import AsyncExitStack
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from dataclasses import dataclass
 from dotenv import load_dotenv
 from rich.markdown import Markdown
@@ -17,12 +17,82 @@ from pydantic_ai import Agent, RunContext
 load_dotenv()
 
 # ========== Helper function to get model configuration ==========
-def get_model():
-    llm = os.getenv('MODEL_CHOICE', 'gpt-4o-mini')
+def get_model(model_name=None):
+    """
+    Get the OpenAI model configuration with optional model override.
+    
+    Args:
+        model_name: Optional override for the model name.
+    
+    Returns:
+        OpenAIModel instance configured with the specified or default model.
+    """
+    llm = model_name or os.getenv('MODEL_CHOICE', 'gpt-4o-mini')
     base_url = os.getenv('BASE_URL', 'https://api.openai.com/v1')
     api_key = os.getenv('LLM_API_KEY', 'no-api-key-provided')
 
     return OpenAIModel(llm, provider=OpenAIProvider(base_url=base_url, api_key=api_key))
+
+# ========== Model selection agent and function ==========
+
+# Default model for the model selection agent
+MODEL_SELECTOR_DEFAULT = "gpt-3.5-turbo"
+
+# Create the model selection agent
+model_selection_agent = Agent(
+    get_model(MODEL_SELECTOR_DEFAULT),
+    system_prompt="""You are a model selection specialist. Your job is to determine the most appropriate 
+    OpenAI model for a given user request based on its complexity, length, and requirements.
+    
+    For simple queries, factual questions, or basic tasks, select gpt-3.5-turbo.
+    For complex reasoning, creative tasks, or detailed analysis, select gpt-4o.
+    For medium complexity tasks that need good performance at lower cost, select gpt-4o-mini.
+    
+    Additionally, rephrase the user's input to be more optimized for the selected model, clarifying ambiguities
+    and structuring the query appropriately.
+    
+    Respond with ONLY a JSON object with two fields:
+    1. "model" - The selected model name (e.g., "gpt-3.5-turbo", "gpt-4o-mini", or "gpt-4o")
+    2. "rephrased_query" - The optimized version of the user's query
+    """
+)
+
+async def select_model_for_task(user_query: str) -> Tuple[str, str]:
+    """
+    Determine the best model and optimize the query for the task.
+    
+    Args:
+        user_query: The original user query.
+        
+    Returns:
+        Tuple of (selected_model_name, rephrased_query).
+    """
+    try:
+        instruction = f"""
+        Analyze the following user query and select the most appropriate OpenAI model:
+        
+        USER QUERY: {user_query}
+        
+        Based on complexity, determine if this requires:
+        - gpt-3.5-turbo (simple queries, factual questions, basic tasks)
+        - gpt-4o-mini (medium complexity tasks requiring good performance)
+        - gpt-4o (complex reasoning, creative tasks, detailed analysis)
+        
+        Also rephrase the query to be optimized for the selected model.
+        """
+        
+        result = await model_selection_agent.run(instruction)
+        response = result.parse_json_response()
+        
+        selected_model = response.get("model", os.getenv('MODEL_CHOICE', 'gpt-4o-mini'))
+        rephrased_query = response.get("rephrased_query", user_query)
+        
+        print(f"Selected model: {selected_model}")
+        return selected_model, rephrased_query
+    except Exception as e:
+        print(f"Error in model selection: {e}")
+        # Fall back to default model and original query
+        return os.getenv('MODEL_CHOICE', 'gpt-4o-mini'), user_query
 
 # ========== Set up MCP servers for each service ==========
 
@@ -226,6 +296,11 @@ async def main():
     """Run the primary agent with a given query."""
     print("MCP Agent Army - Multi-agent system using Model Context Protocol")
     print("Enter 'exit' to quit the program.")
+    print("Type 'enable auto model' to enable dynamic model selection.")
+    print("Type 'disable auto model' to disable dynamic model selection.")
+    
+    # Flag to control dynamic model selection
+    auto_model_selection = False
     
     # Use AsyncExitStack to manage all MCP servers in one context
     async with AsyncExitStack() as stack:
@@ -250,13 +325,38 @@ async def main():
             if user_input.lower() in ['exit', 'quit', 'bye', 'goodbye']:
                 print("Goodbye!")
                 break
+                
+            # Check for auto model commands
+            if user_input.lower() == 'enable auto model':
+                auto_model_selection = True
+                print("[System] Auto model selection enabled! The system will now choose the best model for each task.")
+                continue
+                
+            if user_input.lower() == 'disable auto model':
+                auto_model_selection = False
+                print("[System] Auto model selection disabled. Using default model for all tasks.")
+                continue
             
             try:
-                # Process the user input and output the response
+                # Process the user input
                 print("\n[Assistant]")
+                
+                # If auto model selection is enabled, determine the best model
+                processed_input = user_input
+                selected_model = None
+                
+                if auto_model_selection:
+                    print("[System] Selecting optimal model for this task...")
+                    selected_model, processed_input = await select_model_for_task(user_input)
+                    # Update the model for the primary agent
+                    primary_agent.model = get_model(selected_model)
+                    print(f"[System] Using model: {selected_model}")
+                    print(f"[System] Optimized query: {processed_input}")
+                
+                # Process with the selected or default model
                 with Live('', console=console, vertical_overflow='visible') as live:
                     async with primary_agent.run_stream(
-                        user_input, message_history=messages
+                        processed_input, message_history=messages
                     ) as result:
                         curr_message = ""
                         async for message in result.stream_text(delta=True):
@@ -265,6 +365,10 @@ async def main():
                     
                     # Add the new messages to the chat history
                     messages.extend(result.all_messages())
+                
+                # Reset model to default after processing if auto selection was used
+                if auto_model_selection:
+                    primary_agent.model = get_model()
                 
             except Exception as e:
                 print(f"\n[Error] An error occurred: {str(e)}")
