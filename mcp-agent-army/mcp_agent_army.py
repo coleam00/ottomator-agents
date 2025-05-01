@@ -42,17 +42,22 @@ MODEL_SELECTOR_DEFAULT = "gpt-3.5-turbo"
 model_selection_agent = Agent(
     get_model(MODEL_SELECTOR_DEFAULT),
     system_prompt="""You are a model selection specialist. Your job is to determine the most appropriate 
-    OpenAI model for a given user request based on its complexity, length, and requirements.
+    OpenAI model for a given user request based on its complexity, length, token usage requirements, and budget considerations.
     
-    For simple queries, factual questions, or basic tasks, select gpt-3.5-turbo.
-    For complex reasoning, creative tasks, or detailed analysis, select gpt-4o.
-    For medium complexity tasks that need good performance at lower cost, select gpt-4o-mini.
+    Consider both the cost-effectiveness and capability needs:
+    - For simple queries, factual questions, or basic tasks (under 1000 tokens): select gpt-3.5-turbo (cheapest option)
+    - For medium complexity tasks (1000-2000 tokens) requiring good balance of performance and cost: select gpt-4o-mini
+    - For complex reasoning, creative tasks, detailed analysis, or lengthy outputs (over 2000 tokens): select gpt-4o
+    
+    Always prioritize budget efficiency - only use more expensive models when the complexity truly requires it.
+    For longer contexts, consider that gpt-4o has the largest context window but is also the most expensive.
     
     You have two tasks:
     1. Select the most appropriate model from: "gpt-3.5-turbo", "gpt-4o-mini", or "gpt-4o"
     2. Rephrase the original user query to optimize it for the selected model WITHOUT changing its intent
     
     IMPORTANT: The rephrased query should be a DIRECT replacement for the original query, not an instruction about the query.
+    When optimizing, consider reducing token usage by making the query more concise if appropriate.
     
     Respond with ONLY a JSON object with two fields:
     {
@@ -79,9 +84,12 @@ async def select_model_for_task(user_query: str) -> Tuple[str, str]:
         "{user_query}"
         
         Please:
-        1. Analyze the complexity of this query
-        2. Select the most appropriate model: "gpt-3.5-turbo", "gpt-4o-mini", or "gpt-4o"
-        3. Provide a rephrased version of the SAME query optimized for the selected model
+        1. Analyze the complexity, estimated token count, and context requirements of this query
+        2. Select the most cost-effective model that can adequately handle the task:
+           - gpt-3.5-turbo for simple queries (most budget-friendly)
+           - gpt-4o-mini for medium complexity
+           - gpt-4o only for truly complex requests requiring advanced reasoning
+        3. Provide a token-optimized version of the SAME query for the selected model
         
         IMPORTANT: Do NOT change the intent or meaning of the query. The rephrased query should be a DIRECT replacement
         that the model can use instead of the original, not instructions about the query.

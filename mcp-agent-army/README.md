@@ -23,7 +23,6 @@ This system uses a primary orchestration agent that delegates tasks to specializ
 
 - **Multi-agent Architecture**: Distribute tasks to specialized agents for better handling of complex operations
 - **Dynamic Model Selection**: Automatically choose the optimal OpenAI model based on the complexity of the user's request (NEW!)
-   to use it type "enable auto model" to chat. You will be prompted with "Enabled auto model selection"
 - **Integrated MCP Servers**: Connect with various third-party services through standardized interfaces
 - **Asynchronous Processing**: Efficiently manage multiple operations in parallel
 
