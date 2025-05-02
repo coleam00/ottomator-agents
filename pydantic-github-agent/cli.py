@@ -45,7 +45,7 @@ class CLI:
                     ModelRequest(parts=[UserPromptPart(content=user_input)])
                 )
 
-                # Store itermediatry messages like tool calls and responses
+                # Store intermediatry messages like tool calls and responses
                 filtered_messages = [msg for msg in result.new_messages() 
                                 if not (hasattr(msg, 'parts') and 
                                         any(part.part_kind == 'user-prompt' or part.part_kind == 'text' for part in msg.parts))]
