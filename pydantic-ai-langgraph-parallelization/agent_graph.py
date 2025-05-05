@@ -65,7 +65,7 @@ async def gather_info(state: TravelState, writer) -> Dict[str, Any]:
         curr_response = ""
         async for message, last in result.stream_structured(debounce_by=0.01):  
             try:
-                if last and not travel_details.response:
+                if last and not (travel_details or travel_details.response):
                     raise Exception("Incorrect travel details returned by the agent.")
                 travel_details = await result.validate_structured_result(  
                     message,
