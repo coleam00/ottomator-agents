@@ -19,6 +19,13 @@ This system uses a primary orchestration agent that delegates tasks to specializ
 - **Slack Agent**: Sends messages and manages Slack communications
 - **Firecrawl Agent**: Extracts data from websites through web crawling
 
+## Key Features
+
+- **Multi-agent Architecture**: Distribute tasks to specialized agents for better handling of complex operations
+- **Dynamic Model Selection**: Automatically choose the optimal OpenAI model based on the complexity of the user's request (NEW!)
+- **Integrated MCP Servers**: Connect with various third-party services through standardized interfaces
+- **Asynchronous Processing**: Efficiently manage multiple operations in parallel
+
 ## Requirements
 
 - Python 3.9+
@@ -51,7 +58,7 @@ Set the following environment variables in your `.env` file:
 - `PROVIDER`: Your LLM provider (OpenAI, OpenRouter, Ollama)
 - `BASE_URL`: API base URL for your LLM provider
 - `LLM_API_KEY`: Your LLM API key
-- `MODEL_CHOICE`: The model to use (e.g., gpt-4o-mini)
+- `MODEL_CHOICE`: The default model to use (e.g., gpt-4o-mini)
 - `BRAVE_API_KEY`: API key for Brave Search
 - `AIRTABLE_API_KEY`: API key for Airtable
 - `GITHUB_TOKEN`: Personal access token for GitHub
@@ -68,6 +75,23 @@ python mcp_agent_army.py
 ```
 
 Enter your requests at the prompt. The primary agent will analyze your request and delegate it to the appropriate specialized agent.
+
+### Dynamic Model Selection
+
+To enable the automatic model selection feature:
+```
+enable auto model
+```
+
+To disable it and revert to using the default model:
+```
+disable auto model
+```
+
+When enabled, the system will:
+1. Analyze your request to determine the best OpenAI model (gpt-3.5-turbo, gpt-4o-mini, or gpt-4o)
+2. Optimize your query for the selected model
+3. Process your request with the chosen model
 
 Example requests:
 - "Search for the latest AI research papers on multi-agent systems"
