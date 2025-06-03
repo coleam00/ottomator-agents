@@ -8,7 +8,7 @@ This platform is still in beta – expect longer response times under load, a ra
 
 # What is this Repository for?
 
-This repository contains the source code/workflow JSON for all the agents on the Live Agent Studio! Every agent being added to the platform is currently be open sourced here so we can not only create a curated collection of cutting-edge agents together as a community, but also learn from one another!
+This repository contains the source code/workflow JSON for all the agents on the Live Agent Studio! Every agent being added to the platform is currently being open sourced here so we can not only create a curated collection of cutting-edge agents together as a community, but also learn from one another!
 
 ## Tokens
 
