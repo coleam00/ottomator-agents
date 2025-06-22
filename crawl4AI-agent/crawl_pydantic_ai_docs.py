@@ -11,13 +11,23 @@ from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
-from openai import AsyncOpenAI
+from openai import AsyncAzureOpenAI
 from supabase import create_client, Client
 
 load_dotenv()
 
 # Initialize OpenAI and Supabase clients
-openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai_client = AsyncAzureOpenAI(
+    api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
+    azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+    api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
+)
+
+text_3_small_openai_client = AsyncAzureOpenAI(
+    api_key=os.environ.get("TEXT_3_SMALL_AZURE_OPENAI_API_KEY"),
+    azure_endpoint=os.environ.get("TEXT_3_SMALL_AZURE_OPENAI_ENDPOINT"),
+    api_version=os.environ.get("TEXT_3_SMALL_AZURE_OPENAI_API_VERSION"),
+)
 supabase: Client = create_client(
     os.getenv("SUPABASE_URL"),
     os.getenv("SUPABASE_SERVICE_KEY")
@@ -79,7 +89,7 @@ def chunk_text(text: str, chunk_size: int = 5000) -> List[str]:
     return chunks
 
 async def get_title_and_summary(chunk: str, url: str) -> Dict[str, str]:
-    """Extract title and summary using GPT-4."""
+    """Extract title and summary using GPT gpt-4.1-mini."""
     system_prompt = """You are an AI that extracts titles and summaries from documentation chunks.
     Return a JSON object with 'title' and 'summary' keys.
     For the title: If this seems like the start of a document, extract its title. If it's a middle chunk, derive a descriptive title.
@@ -88,7 +98,8 @@ async def get_title_and_summary(chunk: str, url: str) -> Dict[str, str]:
     
     try:
         response = await openai_client.chat.completions.create(
-            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+            model=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME"),
+            
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"URL: {url}\n\nContent:\n{chunk[:1000]}..."}  # Send first 1000 chars for context
@@ -103,10 +114,12 @@ async def get_title_and_summary(chunk: str, url: str) -> Dict[str, str]:
 async def get_embedding(text: str) -> List[float]:
     """Get embedding vector from OpenAI."""
     try:
-        response = await openai_client.embeddings.create(
-            model="text-embedding-3-small",
+        response = await text_3_small_openai_client.embeddings.create(
+            model=os.environ.get("TEXT_3_SMALL_AZURE_OPENAI_DEPLOYMENT_NAME"),
             input=text
         )
+        print("embedding: ", response.data[0].embedding)
+
         return response.data[0].embedding
     except Exception as e:
         print(f"Error getting embedding: {e}")

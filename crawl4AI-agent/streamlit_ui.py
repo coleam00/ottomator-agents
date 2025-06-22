@@ -7,7 +7,7 @@ import streamlit as st
 import json
 import logfire
 from supabase import Client
-from openai import AsyncOpenAI
+from openai import AsyncAzureOpenAI
 
 # Import all the message part classes
 from pydantic_ai.messages import (
@@ -28,7 +28,11 @@ from pydantic_ai_expert import pydantic_ai_expert, PydanticAIDeps
 from dotenv import load_dotenv
 load_dotenv()
 
-openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai_client = AsyncAzureOpenAI(
+    api_key=os.getenv("TEXT_3_SMALL_AZURE_OPENAI_API_KEY"),
+    azure_endpoint=os.getenv("TEXT_3_SMALL_AZURE_OPENAI_ENDPOINT"),
+    api_version=os.getenv("TEXT_3_SMALL_AZURE_OPENAI_API_VERSION", "2023-05-15")
+)
 supabase: Client = Client(
     os.getenv("SUPABASE_URL"),
     os.getenv("SUPABASE_SERVICE_KEY")

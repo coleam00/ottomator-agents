@@ -9,21 +9,30 @@ import os
 
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.models.openai import OpenAIModel
-from openai import AsyncOpenAI
+from pydantic_ai.providers.openai import OpenAIProvider
+from openai import AsyncAzureOpenAI
 from supabase import Client
 from typing import List
 
 load_dotenv()
 
-llm = os.getenv('LLM_MODEL', 'gpt-4o-mini')
-model = OpenAIModel(llm)
+azureOpenAIclient = AsyncAzureOpenAI(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2023-05-15")
+)
+
+model = OpenAIModel(
+    os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+    provider=OpenAIProvider(openai_client=azureOpenAIclient),
+)
 
 logfire.configure(send_to_logfire='if-token-present')
 
 @dataclass
 class PydanticAIDeps:
     supabase: Client
-    openai_client: AsyncOpenAI
+    openai_client: AsyncAzureOpenAI
 
 system_prompt = """
 You are an expert at Pydantic AI - a Python AI agent framework that you have access to all the documentation to,
@@ -46,11 +55,11 @@ pydantic_ai_expert = Agent(
     retries=2
 )
 
-async def get_embedding(text: str, openai_client: AsyncOpenAI) -> List[float]:
+async def get_embedding(text: str, openai_client: AsyncAzureOpenAI) -> List[float]:
     """Get embedding vector from OpenAI."""
     try:
         response = await openai_client.embeddings.create(
-            model="text-embedding-3-small",
+            model=os.getenv("TEXT_3_SMALL_AZURE_OPENAI_DEPLOYMENT_NAME"),
             input=text
         )
         return response.data[0].embedding
