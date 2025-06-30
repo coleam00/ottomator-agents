@@ -100,16 +100,17 @@ async def create_session(
     async with db_pool.acquire() as conn:
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=timeout_minutes)
         
-        result = await conn.fetchrow(
-            """
-            INSERT INTO sessions (user_id, metadata, expires_at)
-            VALUES ($1, $2, $3)
-            RETURNING id::text
-            """,
-            user_id,
-            json.dumps(metadata or {}),
-            expires_at
-        )
+async def search_entities(conn, search_term: str, limit: int = 10):
+    """Search for entities by name or description"""
+    query = """
+        SELECT id, name, description, entity_type
+        FROM entities
+        WHERE name ILIKE $1 OR description ILIKE $1
+        ORDER BY name
+        LIMIT $2
+    """
+    search_pattern = f"%{search_term}%"
+    return await conn.fetch(query, search_pattern, limit)
         
         return result["id"]
 
