@@ -1,4 +1,4 @@
-.PHONY: help install test type-check security clean run docker-build docker-up docker-down
+.PHONY: help install test lint type-check security clean run docker-build docker-up docker-down
 
 # Default target
 help:
@@ -12,10 +12,12 @@ help:
 	@echo "  make ingest       Run document ingestion"
 	@echo "  make cli          Run the CLI interface"
 	@echo ""
-	@echo "Testing:"
+	@echo "Testing & Quality:"
 	@echo "  make test         Run tests"
+	@echo "  make lint         Run basic linting"
 	@echo "  make type-check   Run type checking"
 	@echo "  make security     Run security checks"
+	@echo "  make check        Run all checks (lint, type, security)"
 	@echo ""
 	@echo "Docker:"
 	@echo "  make docker-build Build Docker image"
@@ -40,13 +42,23 @@ ingest:
 cli:
 	python cli.py
 
-# Testing
+# Testing & Quality
 test:
 	@if [ -d "tests" ]; then \
 		pytest tests/ -v --tb=short || true; \
 	else \
 		echo "No tests directory found"; \
 	fi
+
+lint:
+	@echo "Installing linting tools..."
+	@pip install -q flake8 pylint
+	@echo "Running flake8..."
+	@flake8 agent/ ingestion/ --count --select=E9,F63,F7,F82 --show-source --statistics || true
+	@echo "Running flake8 (comprehensive)..."
+	@flake8 agent/ ingestion/ --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+	@echo "Running pylint (errors only)..."
+	@pylint agent/ ingestion/ --errors-only --exit-zero || true
 
 type-check:
 	pip install mypy types-requests
@@ -56,6 +68,9 @@ security:
 	pip install safety bandit
 	safety check || true
 	bandit -r agent/ ingestion/ -ll || true
+
+check: lint type-check security
+	@echo "All checks completed!"
 
 # Docker
 docker-build:

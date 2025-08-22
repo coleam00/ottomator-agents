@@ -44,3 +44,27 @@ targets = ["agent", "ingestion"]
 exclude_dirs = ["tests", "venv", "env", ".venv"]
 skips = ["B101", "B601", "B104", "B105", "B106", "B107", "B108"]
 severity = "medium"
+
+[tool.flake8]
+max-line-length = 100
+max-complexity = 10
+exclude = [
+    ".git",
+    "__pycache__",
+    "venv",
+    "env",
+    ".venv",
+    "build",
+    "dist",
+]
+# Only check for critical errors by default
+select = ["E9", "F63", "F7", "F82"]
+# E9: Python syntax errors
+# F63: Invalid use of operators/literals
+# F7: Invalid syntax
+# F82: Undefined names
+ignore = ["E203", "E266", "E501", "W503"]
+per-file-ignores = [
+    "__init__.py:F401",
+    "tests/*:F401,F811",
+]
