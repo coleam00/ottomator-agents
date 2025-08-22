@@ -13,16 +13,19 @@ async def test_supabase_connection():
     supabase_url = os.getenv("SUPABASE_URL", "").replace("https://", "")
     project_ref = supabase_url.split(".")[0] if supabase_url else "bpopugzfbokjzgawshov"
     
+    # Get password from environment variable
+    db_password = os.getenv("SUPABASE_DB_PASSWORD", "YOUR_DB_PASSWORD_HERE")
+    
     # Common Supabase connection patterns
     connection_strings = [
         # Direct connection (port 5432)
-        f"postgresql://postgres.{project_ref}:zwxx5r5rEN3LmqNhhQfZQEQcihekvH4AED4FrLTdG9I@aws-0-us-west-1.pooler.supabase.com:5432/postgres",
+        f"postgresql://postgres.{project_ref}:{db_password}@aws-0-us-west-1.pooler.supabase.com:5432/postgres",
         # Pooler connection (port 6543) 
-        f"postgresql://postgres.{project_ref}:zwxx5r5rEN3LmqNhhQfZQEQcihekvH4AED4FrLTdG9I@aws-0-us-west-1.pooler.supabase.com:6543/postgres",
+        f"postgresql://postgres.{project_ref}:{db_password}@aws-0-us-west-1.pooler.supabase.com:6543/postgres",
         # Session pooler
-        f"postgresql://postgres.{project_ref}:zwxx5r5rEN3LmqNhhQfZQEQcihekvH4AED4FrLTdG9I@aws-0-us-west-1.pooler.supabase.com:5432/postgres?pgbouncer=true",
+        f"postgresql://postgres.{project_ref}:{db_password}@aws-0-us-west-1.pooler.supabase.com:5432/postgres?pgbouncer=true",
         # Direct to database
-        f"postgresql://postgres:zwxx5r5rEN3LmqNhhQfZQEQcihekvH4AED4FrLTdG9I@db.{project_ref}.supabase.co:5432/postgres",
+        f"postgresql://postgres:{db_password}@db.{project_ref}.supabase.co:5432/postgres",
     ]
     
     for i, conn_str in enumerate(connection_strings, 1):
