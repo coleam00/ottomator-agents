@@ -187,6 +187,11 @@ docker-compose.override.yml
 test-results/
 test-reports/
 
+# Test files with potential credentials
+tests/
+test_*.py
+*_test.py
+
 # Neo4j
 neo4j/
 

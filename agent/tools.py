@@ -11,7 +11,7 @@ import asyncio
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-from .db_utils import (
+from .unified_db_utils import (
     vector_search,
     hybrid_search,
     get_document,

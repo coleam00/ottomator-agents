@@ -64,7 +64,7 @@ class GraphitiClient:
         self.embedding_base_url = os.getenv("EMBEDDING_BASE_URL", "https://api.openai.com/v1")
         self.embedding_api_key = os.getenv("EMBEDDING_API_KEY")
         self.embedding_model = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-        self.embedding_dimensions = int(os.getenv("VECTOR_DIMENSION", "1536"))
+        self.embedding_dimensions = int(os.getenv("VECTOR_DIMENSION", "3072"))
         
         if not self.embedding_api_key:
             raise ValueError("EMBEDDING_API_KEY environment variable not set")

@@ -53,7 +53,7 @@ pip install -r requirements.txt
 
 Execute the SQL in `sql/schema.sql` to create all necessary tables, indexes, and functions.
 
-Be sure to change the embedding dimensions on lines 31, 67, and 100 based on your embedding model. OpenAI's text-embedding-3-small is 1536 and nomic-embed-text from Ollama is 768 dimensions, for reference.
+Be sure to change the embedding dimensions on lines 31, 67, and 100 based on your embedding model. OpenAI's text-embedding-3-small is 1536, Gemini's gemini-embedding-001 is 3072, and nomic-embed-text from Ollama is 768 dimensions, for reference.
 
 Note that this script will drop all tables before creating/recreating!
 
@@ -209,34 +209,6 @@ python cli.py --port 8080
   - `hybrid_search` - Combined search approach
 - **Session management** - Maintains conversation context
 - **Color-coded output** - Easy to read responses and tool information
-
-#### Example CLI Session
-
-```
-🤖 Agentic RAG with Knowledge Graph CLI
-============================================================
-Connected to: http://localhost:8058
-
-You: What are Microsoft's AI initiatives?
-
-🤖 Assistant:
-Microsoft has several major AI initiatives including...
-
-🛠 Tools Used:
-  1. vector_search (query='Microsoft AI initiatives', limit=10)
-  2. graph_search (query='Microsoft AI projects')
-
-────────────────────────────────────────────────────────────
-
-You: How is Microsoft connected to OpenAI?
-
-🤖 Assistant:
-Microsoft has a significant strategic partnership with OpenAI...
-
-🛠 Tools Used:
-  1. hybrid_search (query='Microsoft OpenAI partnership', limit=10)
-  2. get_entity_relationships (entity='Microsoft')
-```
 
 #### CLI Commands
 
