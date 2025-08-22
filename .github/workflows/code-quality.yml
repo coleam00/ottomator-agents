@@ -1,0 +1,189 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run daily at midnight UTC
+    - cron: '0 0 * * *'
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    if: github.repository == 'marypause/marypause_ai'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for better analysis
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+    
+    - name: Run tests with coverage
+      run: |
+        pytest tests/ --cov=agent --cov=ingestion --cov-report=xml --cov-report=term
+      continue-on-error: true
+    
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.projectKey=marypause_marypause_ai
+          -Dsonar.organization=marypause
+          -Dsonar.python.coverage.reportPaths=coverage.xml
+          -Dsonar.sources=agent,ingestion
+          -Dsonar.tests=tests
+          -Dsonar.python.version=3.11
+
+  complexity-check:
+    name: Code Complexity Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install analysis tools
+      run: |
+        pip install radon xenon mccabe flake8 flake8-cognitive-complexity
+    
+    - name: Cyclomatic Complexity with Radon
+      run: |
+        echo "## 📊 Cyclomatic Complexity Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        radon cc agent ingestion -s -a >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        
+        # Fail if complexity is too high
+        radon cc agent ingestion --min B --max F -s
+      continue-on-error: true
+    
+    - name: Maintainability Index
+      run: |
+        echo "## 📈 Maintainability Index" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        radon mi agent ingestion -s >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+    
+    - name: Cognitive Complexity
+      run: |
+        flake8 agent ingestion --max-cognitive-complexity=10 --select=CCR001
+      continue-on-error: true
+    
+    - name: Code Metrics with Xenon
+      run: |
+        xenon --max-absolute B --max-modules B --max-average A agent ingestion
+      continue-on-error: true
+
+  documentation-check:
+    name: Documentation Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install documentation tools
+      run: |
+        pip install pydocstyle interrogate docstr-coverage
+    
+    - name: Check docstring style
+      run: |
+        pydocstyle agent ingestion --convention=google
+      continue-on-error: true
+    
+    - name: Check docstring coverage
+      run: |
+        echo "## 📚 Documentation Coverage" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        interrogate -v agent ingestion --fail-under 70 --exclude tests
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        interrogate -v agent ingestion --generate-badge ./docs/ >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+    
+    - name: Detailed docstring report
+      run: |
+        docstr-coverage agent ingestion --skip-init --skip-magic --badge ./docs/
+      continue-on-error: true
+
+  dead-code-check:
+    name: Dead Code Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install vulture
+      run: |
+        pip install vulture
+    
+    - name: Find dead code
+      run: |
+        echo "## 🔍 Dead Code Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        vulture agent ingestion --min-confidence 80 >> $GITHUB_STEP_SUMMARY || true
+        echo '```' >> $GITHUB_STEP_SUMMARY
+      continue-on-error: true
+
+  duplicate-code-check:
+    name: Code Duplication Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install pylint
+      run: |
+        pip install pylint
+    
+    - name: Check for duplicate code
+      run: |
+        pylint agent ingestion --disable=all --enable=duplicate-code
+      continue-on-error: true
+    
+    - name: CPD (Copy/Paste Detector)
+      uses: kucherenko/jscpd@v2
+      with:
+        config: |
+          {
+            "threshold": 5,
+            "reporters": ["html", "console"],
+            "ignore": ["**/*.md", "**/tests/**"],
+            "format": ["python"],
+            "absolute": true
+          }

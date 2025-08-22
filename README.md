@@ -1,6 +1,15 @@
-# Agentic RAG with Knowledge Graph
+# Medical RAG Agent with Knowledge Graph
 
-Agentic knowledge retrieval redefined with an AI agent system that combines traditional RAG (vector search) with knowledge graph capabilities to analyze and provide insights about big tech companies and their AI initiatives. The system uses PostgreSQL with pgvector for semantic search and Neo4j with Graphiti for temporal knowledge graphs. The goal is to create Agentic RAG at its finest.
+[![CI Pipeline](https://github.com/marypause/marypause_ai/actions/workflows/ci.yml/badge.svg)](https://github.com/marypause/marypause_ai/actions/workflows/ci.yml)
+[![Security Scan](https://github.com/marypause/marypause_ai/actions/workflows/security.yml/badge.svg)](https://github.com/marypause/marypause_ai/actions/workflows/security.yml)
+[![Code Quality](https://github.com/marypause/marypause_ai/actions/workflows/code-quality.yml/badge.svg)](https://github.com/marypause/marypause_ai/actions/workflows/code-quality.yml)
+[![codecov](https://codecov.io/gh/marypause/marypause_ai/branch/main/graph/badge.svg)](https://codecov.io/gh/marypause/marypause_ai)
+[![Python 3.11](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker](https://img.shields.io/docker/v/marypause/medical-rag-agent?label=docker&logo=docker)](https://hub.docker.com/r/marypause/medical-rag-agent)
+[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+
+An advanced medical knowledge retrieval system that combines traditional RAG (vector search) with knowledge graph capabilities to analyze and provide insights about medical information. The system uses PostgreSQL with pgvector for semantic search and Neo4j with Graphiti for temporal knowledge graphs.
 
 Built with:
 
