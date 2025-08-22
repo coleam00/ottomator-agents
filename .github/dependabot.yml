@@ -4,61 +4,16 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-    open-pull-requests-limit: 10
-    reviewers:
-      - "kikocoelho"
-    assignees:
-      - "kikocoelho"
+      interval: "monthly"
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
-      - "python"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-    pull-request-branch-name:
-      separator: "-"
-    ignore:
-      # Ignore major version updates for critical packages
-      - dependency-name: "pydantic"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "fastapi"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "asyncpg"
-        update-types: ["version-update:semver-major"]
-    groups:
-      # Group related dependencies together
-      pydantic:
-        patterns:
-          - "pydantic*"
-      testing:
-        patterns:
-          - "pytest*"
-          - "coverage"
-      linting:
-        patterns:
-          - "ruff"
-          - "black"
-          - "mypy"
-          - "isort"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
+      interval: "monthly"
     open-pull-requests-limit: 5
-    reviewers:
-      - "kikocoelho"
-    assignees:
-      - "kikocoelho"
     labels:
-      - "dependencies"
-      - "ci/cd"
-    commit-message:
-      prefix: "ci"
-      include: "scope"
+      - "ci"

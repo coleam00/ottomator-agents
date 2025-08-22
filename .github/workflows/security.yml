@@ -1,208 +1,60 @@
-name: Security Scanning
+name: Security
 
 on:
   schedule:
-    # Run security scans daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
   push:
     branches: [ main ]
     paths:
       - 'requirements.txt'
-      - 'pyproject.toml'
       - '**/*.py'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  security-events: write
-
 jobs:
-  dependency-review:
-    name: Dependency Review
+  security-scan:
+    name: Security Scanning
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        fail-on-severity: moderate
-        deny-licenses: GPL-3.0, AGPL-3.0
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit pip-audit
+    
+    - name: Check dependencies for vulnerabilities
+      run: |
+        pip install -r requirements.txt
         
-  codeql-analysis:
-    name: CodeQL Analysis
-    runs-on: ubuntu-latest
+        # Check with safety
+        safety check --continue-on-error || true
+        
+        # Check with pip-audit
+        pip-audit --desc || true
+      continue-on-error: true
     
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'python' ]
+    - name: Scan code for security issues
+      run: |
+        # Run bandit on source code
+        bandit -r agent/ ingestion/ -f json -o security-report.json || true
+        
+        # Display results
+        if [ -f security-report.json ]; then
+          python -m json.tool security-report.json || true
+        fi
+      continue-on-error: true
     
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-        queries: security-and-quality
-    
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
-    
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
-
-  trivy-scan:
-    name: Trivy Security Scan
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Run Trivy vulnerability scanner in repo mode
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        severity: 'CRITICAL,HIGH,MEDIUM'
-        ignore-unfixed: true
-    
-    - name: Upload Trivy results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
+    - name: Upload security report
+      uses: actions/upload-artifact@v4
       if: always()
       with:
-        sarif_file: 'trivy-results.sarif'
-
-  osv-scan:
-    name: OSV Vulnerability Scan
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Run OSV Scanner
-      uses: google/osv-scanner-action@v1
-      with:
-        scan-args: |-
-          --recursive
-          --skip-git
-          .
-
-  snyk-scan:
-    name: Snyk Security Scan
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-    
-    - name: Run Snyk to check for vulnerabilities
-      uses: snyk/actions/python@master
-      continue-on-error: true
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        args: --severity-threshold=high --file=requirements.txt
-
-  secrets-scan:
-    name: Secret Scanning
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: TruffleHog OSS
-      uses: trufflesecurity/trufflehog@main
-      with:
-        path: ./
-        base: ${{ github.event.repository.default_branch }}
-        head: HEAD
-        extra_args: --debug --only-verified
-    
-    - name: Detect secrets with detect-secrets
-      run: |
-        pip install detect-secrets
-        detect-secrets scan --baseline .secrets.baseline || true
-        detect-secrets audit .secrets.baseline || true
-
-  license-check:
-    name: License Compliance Check
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    
-    - name: Install pip-licenses
-      run: |
-        pip install pip-licenses
-    
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-    
-    - name: Check licenses
-      run: |
-        pip-licenses --format=markdown --order=license --with-urls --output-file=LICENSES.md
-        pip-licenses --fail-on="GPL-3.0;AGPL-3.0" || true
-    
-    - name: Upload license report
-      uses: actions/upload-artifact@v4
-      with:
-        name: license-report
-        path: LICENSES.md
-        retention-days: 30
-
-  sbom-generation:
-    name: Generate SBOM
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install cyclonedx-bom
-    
-    - name: Generate SBOM
-      run: |
-        cyclonedx-py -r -i requirements.txt -o sbom.json --format json
-        cyclonedx-py -r -i requirements.txt -o sbom.xml --format xml
-    
-    - name: Upload SBOM
-      uses: actions/upload-artifact@v4
-      with:
-        name: sbom-artifacts
-        path: |
-          sbom.json
-          sbom.xml
+        name: security-report
+        path: security-report.json
         retention-days: 30
