@@ -53,7 +53,7 @@ pip install -r requirements.txt
 
 Execute the SQL in `sql/schema.sql` to create all necessary tables, indexes, and functions.
 
-Be sure to change the embedding dimensions on lines 31, 67, and 100 based on your embedding model. OpenAI's text-embedding-3-small is 1536 and nomic-embed-text from Ollama is 768 dimensions, for reference.
+Be sure to change the embedding dimensions on lines 31, 67, and 100 based on your embedding model. OpenAI's text-embedding-3-small is 1536, Gemini's gemini-embedding-001 is 3072, and nomic-embed-text from Ollama is 768 dimensions, for reference.
 
 Note that this script will drop all tables before creating/recreating!
 

@@ -2,6 +2,7 @@
 Pydantic models for data validation and serialization.
 """
 
+import os
 from typing import List, Dict, Any, Optional, Literal
 from datetime import datetime
 from uuid import UUID
@@ -150,8 +151,10 @@ class Chunk(BaseModel):
     @classmethod
     def validate_embedding(cls, v: Optional[List[float]]) -> Optional[List[float]]:
         """Validate embedding dimensions."""
-        if v is not None and len(v) != 1536:  # OpenAI text-embedding-3-small
-            raise ValueError(f"Embedding must have 1536 dimensions, got {len(v)}")
+        if v is not None:
+            expected_dims = int(os.getenv("VECTOR_DIMENSION", "3072"))
+            if len(v) != expected_dims:
+                raise ValueError(f"Embedding must have {expected_dims} dimensions, got {len(v)}")
         return v
 
 

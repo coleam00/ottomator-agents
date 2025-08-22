@@ -62,12 +62,13 @@ class EmbeddingGenerator:
         self.model_configs = {
             "text-embedding-3-small": {"dimensions": 1536, "max_tokens": 8191},
             "text-embedding-3-large": {"dimensions": 3072, "max_tokens": 8191},
-            "text-embedding-ada-002": {"dimensions": 1536, "max_tokens": 8191}
+            "text-embedding-ada-002": {"dimensions": 1536, "max_tokens": 8191},
+            "gemini-embedding-001": {"dimensions": 3072, "max_tokens": 8191}
         }
         
         if model not in self.model_configs:
             logger.warning(f"Unknown model {model}, using default config")
-            self.config = {"dimensions": 1536, "max_tokens": 8191}
+            self.config = {"dimensions": 3072, "max_tokens": 8191}  # Default to Gemini dimensions
         else:
             self.config = self.model_configs[model]
     

@@ -75,12 +75,12 @@ CREATE INDEX idx_documents_source ON documents (source);
 CREATE INDEX idx_documents_title_trgm ON documents USING GIN (title gin_trgm_ops);
 
 -- Chunks table: Stores document chunks with embeddings
--- Using 768 dimensions for gemini-embedding-001 (as per .env file)
+-- Using 3072 dimensions for gemini-embedding-001 (as per .env file)
 CREATE TABLE chunks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
-    embedding vector(768), -- Gemini gemini-embedding-001 dimension
+    embedding vector(3072), -- Gemini gemini-embedding-001 dimension
     chunk_index INTEGER NOT NULL,
     metadata JSONB DEFAULT '{}' NOT NULL,
     token_count INTEGER,
@@ -140,7 +140,7 @@ CREATE INDEX idx_messages_role ON messages (role);
 
 -- Function: Vector similarity search
 CREATE OR REPLACE FUNCTION match_chunks(
-    query_embedding vector(768),
+    query_embedding vector(3072),
     match_count INT DEFAULT 10,
     similarity_threshold FLOAT DEFAULT 0.0
 )
@@ -181,7 +181,7 @@ $$;
 
 -- Function: Hybrid search combining vector and text search
 CREATE OR REPLACE FUNCTION hybrid_search(
-    query_embedding vector(768),
+    query_embedding vector(3072),
     query_text TEXT,
     match_count INT DEFAULT 10,
     text_weight FLOAT DEFAULT 0.3,
@@ -501,8 +501,8 @@ INSERT INTO documents (title, source, content, metadata) VALUES
 (
     'Medical RAG Database Setup Test',
     'system',
-    'This is a test document to verify that the Medical RAG database schema has been set up correctly in Supabase. It includes vector search capabilities, full-text search, and session management. The system supports Gemini embeddings with 768 dimensions and provides comprehensive medical document analysis capabilities.',
-    '{"type": "test", "version": "1.0", "setup_date": "2025-01-22", "embedding_model": "gemini-embedding-001", "dimensions": 768}'
+    'This is a test document to verify that the Medical RAG database schema has been set up correctly in Supabase. It includes vector search capabilities, full-text search, and session management. The system supports Gemini embeddings with 3072 dimensions and provides comprehensive medical document analysis capabilities.',
+    '{"type": "test", "version": "1.0", "setup_date": "2025-01-22", "embedding_model": "gemini-embedding-001", "dimensions": 3072}'
 );
 
 -- =====================================================
@@ -529,7 +529,7 @@ SELECT COUNT(*) as document_count FROM documents;
 -- Test vector functionality
 SELECT 'Vector functionality test:' as status;
 WITH test_vector AS (
-    SELECT array_fill(0.1, ARRAY[768])::vector as test_embedding
+    SELECT array_fill(0.1, ARRAY[3072])::vector as test_embedding
 )
 SELECT 
     'Vector operations working' as status,

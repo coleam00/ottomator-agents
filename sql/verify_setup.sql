@@ -199,7 +199,7 @@ SELECT 'Testing vector operations...' as test;
 
 -- Test vector dimension and operations (this should work if pgvector is properly installed)
 WITH test_vector AS (
-    SELECT array_fill(0.1, ARRAY[1536])::vector as test_embedding
+    SELECT array_fill(0.1, ARRAY[3072])::vector as test_embedding
 )
 SELECT 
     'Vector operations working' as status,

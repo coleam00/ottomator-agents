@@ -49,7 +49,7 @@ If you have the Supabase database password:
 
 ### 2. **Core Tables Created**
 - `documents` - Stores medical documents and metadata
-- `chunks` - Document chunks with vector embeddings (768 dimensions for Gemini)
+- `chunks` - Document chunks with vector embeddings (3072 dimensions for Gemini)
 - `sessions` - User session management
 - `messages` - Conversation message storage
 
@@ -87,7 +87,7 @@ ALTER TABLE messages DISABLE ROW LEVEL SECURITY;
 ```
 
 ### Issue: Dimension Mismatch
-**Solution**: The script is configured for 768 dimensions (Gemini embeddings). If using different embeddings:
+**Solution**: The script is configured for 3072 dimensions (Gemini embeddings). If using different embeddings:
 1. Update the vector dimensions in the SQL script
 2. Update `VECTOR_DIMENSION` in .env file
 
@@ -107,7 +107,7 @@ After deployment, verify the setup:
 
 3. **Test Vector Functionality**
    ```sql
-   SELECT array_length(array_fill(0.1, ARRAY[768])::vector::float[], 1) as dimensions;
+   SELECT array_length(array_fill(0.1, ARRAY[3072])::vector::float[], 1) as dimensions;
    ```
 
 4. **Check Database Stats**
@@ -149,7 +149,7 @@ Once the schema is deployed:
 
 ## Configuration Notes
 
-- **Embedding Model**: Configured for Gemini gemini-embedding-001 (768 dimensions)
+- **Embedding Model**: Configured for Gemini gemini-embedding-001 (3072 dimensions)
 - **Vector Index**: Uses IVFFlat with 100 lists (optimal for ~10K chunks)
 - **Session Timeout**: 60 minutes by default
 - **Permissions**: Service role has full access, anonymous has read access
