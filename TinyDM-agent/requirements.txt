@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-python-dotenv
-httpx
-python-multipart
-google-cloud-aiplatform
-google-genai
-websockets
-supabase

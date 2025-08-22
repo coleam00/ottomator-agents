@@ -1,2 +1,0 @@
-FROM qwen2.5:14b-instruct-q4_K_M
-PARAMETER num_ctx 8096

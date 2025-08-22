@@ -1,7 +1,0 @@
-pydantic-docs/
-pydantic-docs-small/
-chroma_db/
-data/
-__pycache__/
-venv
-.env
