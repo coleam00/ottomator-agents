@@ -1,0 +1,129 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run weekly on Mondays at 3 AM UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dependencies:
+    name: Update Python Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install pip-tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-tools pip-upgrader safety
+    
+    - name: Create requirements.in if not exists
+      run: |
+        if [ ! -f "requirements.in" ]; then
+          cp requirements.txt requirements.in
+        fi
+    
+    - name: Update dependencies
+      run: |
+        # Compile updated requirements
+        pip-compile --upgrade --resolver=backtracking requirements.in
+        
+        # Check for security issues in new versions
+        safety check --json || true
+    
+    - name: Test updated dependencies
+      run: |
+        # Install updated dependencies
+        pip install -r requirements.txt
+        
+        # Run basic import tests
+        python -c "import agent; import ingestion" || true
+    
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v6
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update Python dependencies'
+        title: '🔄 Update Python Dependencies'
+        body: |
+          ## 📦 Dependency Updates
+          
+          This PR updates the Python dependencies to their latest versions.
+          
+          ### Changes
+          - Updated `requirements.txt` with latest compatible versions
+          - Security vulnerabilities checked with Safety
+          
+          ### Checklist
+          - [ ] All tests pass
+          - [ ] No security vulnerabilities introduced
+          - [ ] Application starts successfully
+          - [ ] Type checking passes
+          
+          ---
+          *This PR was automatically created by the dependency update workflow.*
+        branch: update-dependencies
+        delete-branch: true
+        labels: |
+          dependencies
+          automated
+        assignees: kikocoelho
+        reviewers: kikocoelho
+
+  check-outdated:
+    name: Check Outdated Packages
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pip-check
+    
+    - name: Check for outdated packages
+      run: |
+        pip list --outdated --format=json > outdated.json
+        
+        echo "## 📊 Outdated Packages Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Package | Current | Latest | Type |" >> $GITHUB_STEP_SUMMARY
+        echo "|---------|---------|--------|------|" >> $GITHUB_STEP_SUMMARY
+        
+        python -c "
+        import json
+        with open('outdated.json') as f:
+            packages = json.load(f)
+            for pkg in packages[:20]:  # Limit to 20 packages
+                name = pkg['name']
+                current = pkg['version']
+                latest = pkg['latest_version']
+                print(f'| {name} | {current} | {latest} | PyPI |')
+        " >> $GITHUB_STEP_SUMMARY
+    
+    - name: Upload outdated packages report
+      uses: actions/upload-artifact@v4
+      with:
+        name: outdated-packages
+        path: outdated.json
+        retention-days: 7

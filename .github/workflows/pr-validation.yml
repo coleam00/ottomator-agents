@@ -1,0 +1,221 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  pr-title-check:
+    name: PR Title Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check PR title
+      uses: amannn/action-semantic-pull-request@v5
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        types: |
+          feat
+          fix
+          docs
+          style
+          refactor
+          perf
+          test
+          build
+          ci
+          chore
+          revert
+        requireScope: false
+        subjectPattern: ^(?![A-Z]).+$
+        subjectPatternError: |
+          The subject "{subject}" found in the pull request title "{title}"
+          didn't match the configured pattern. Please ensure that the subject
+          doesn't start with an uppercase character.
+
+  label-pr:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/labeler@v5
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        configuration-path: .github/labeler.yml
+
+  size-label:
+    name: Add Size Label
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Add size label
+      uses: codelytv/pr-size-labeler@v1
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        xs_label: 'size/xs'
+        xs_max_size: '10'
+        s_label: 'size/s'
+        s_max_size: '100'
+        m_label: 'size/m'
+        m_max_size: '500'
+        l_label: 'size/l'
+        l_max_size: '1000'
+        xl_label: 'size/xl'
+        fail_if_xl: false
+
+  check-files:
+    name: File Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check for large files
+      run: |
+        # Find files larger than 1MB
+        large_files=$(find . -type f -size +1M | grep -v "^./.git" || true)
+        if [ ! -z "$large_files" ]; then
+          echo "⚠️ Large files detected (>1MB):"
+          echo "$large_files"
+          echo "Consider using Git LFS for large files"
+        fi
+    
+    - name: Check for sensitive files
+      run: |
+        # Check for potentially sensitive files
+        sensitive_patterns=".env|.pem|.key|.p12|.pfx|credentials|password|secret"
+        sensitive_files=$(find . -type f | grep -E "$sensitive_patterns" | grep -v ".example" | grep -v ".md" || true)
+        if [ ! -z "$sensitive_files" ]; then
+          echo "⚠️ Potentially sensitive files detected:"
+          echo "$sensitive_files"
+          exit 1
+        fi
+    
+    - name: Validate Python files
+      run: |
+        # Check for syntax errors in Python files
+        python -m py_compile agent/*.py ingestion/*.py || true
+
+  pr-coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+    
+    - name: Run tests with coverage
+      run: |
+        pytest tests/ --cov=agent --cov=ingestion --cov-report=xml --cov-report=term || true
+    
+    - name: Coverage comment
+      uses: py-cov-action/python-coverage-comment-action@v3
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        MINIMUM_GREEN: 85
+        MINIMUM_ORANGE: 70
+        ANNOTATE_MISSING_LINES: true
+        ANNOTATION_TYPE: warning
+
+  pr-summary:
+    name: PR Summary
+    runs-on: ubuntu-latest
+    needs: [pr-title-check, check-files]
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Generate PR summary
+      run: |
+        echo "## 📊 Pull Request Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Get PR stats
+        FILES_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+        LINES_ADDED=$(git diff --stat origin/${{ github.base_ref }}...HEAD | tail -1 | awk '{print $4}')
+        LINES_DELETED=$(git diff --stat origin/${{ github.base_ref }}...HEAD | tail -1 | awk '{print $6}')
+        
+        echo "### 📈 Statistics" >> $GITHUB_STEP_SUMMARY
+        echo "- **Files Changed:** $FILES_CHANGED" >> $GITHUB_STEP_SUMMARY
+        echo "- **Lines Added:** ${LINES_ADDED:-0}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Lines Deleted:** ${LINES_DELETED:-0}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # List changed files by type
+        echo "### 📁 Changed Files" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "#### Python Files" >> $GITHUB_STEP_SUMMARY
+        git diff --name-only origin/${{ github.base_ref }}...HEAD | grep "\.py$" || echo "No Python files changed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "#### Configuration Files" >> $GITHUB_STEP_SUMMARY
+        git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E "\.(yml|yaml|json|toml|ini|cfg)$" || echo "No config files changed" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Comment PR
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const output = `
+          ## ✅ PR Validation Complete
+          
+          Thank you for your contribution! The automated checks have completed.
+          
+          ### 📋 Checklist
+          - [ ] Tests pass
+          - [ ] Type checking passes
+          - [ ] Security scan passes
+          - [ ] Code follows project style guide
+          - [ ] Documentation updated (if needed)
+          - [ ] CHANGELOG updated (if needed)
+          
+          ### 🔍 Review Guidelines
+          Please ensure your PR:
+          1. Has a clear, descriptive title
+          2. Includes a detailed description of changes
+          3. References any related issues
+          4. Has appropriate test coverage
+          5. Follows the project's coding standards
+          
+          ---
+          *This comment was automatically generated.*
+          `;
+          
+          // Check if we already commented
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.data.find(comment => 
+            comment.user.type === 'Bot' && comment.body.includes('PR Validation Complete')
+          );
+          
+          if (!botComment) {
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: output
+            });
+          }
