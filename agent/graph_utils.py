@@ -78,12 +78,12 @@ class GraphitiClient:
             return
         
         try:
-            # Check LLM provider from environment
+            # Check LLM provider from environment (support both "gemini" and "google")
             llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
             embedding_provider = os.getenv("EMBEDDING_PROVIDER", "openai").lower()
             
             # Configure LLM client based on provider
-            if llm_provider == "gemini":
+            if llm_provider in ["gemini", "google"]:
                 # Use Gemini for LLM
                 llm_config = LLMConfig(
                     api_key=self.llm_api_key,
@@ -107,7 +107,8 @@ class GraphitiClient:
                 embedder = GeminiEmbedder(
                     config=GeminiEmbedderConfig(
                         api_key=self.embedding_api_key,
-                        embedding_model=self.embedding_model
+                        embedding_model=self.embedding_model,
+                        embedding_dim=self.embedding_dimensions  # Add missing embedding dimension
                     )
                 )
             else:
@@ -122,7 +123,7 @@ class GraphitiClient:
                 )
             
             # Configure cross-encoder/reranker based on LLM provider
-            if llm_provider == "gemini":
+            if llm_provider in ["gemini", "google"]:
                 # Use Gemini reranker with the lighter model
                 reranker_config = LLMConfig(
                     api_key=self.llm_api_key,
