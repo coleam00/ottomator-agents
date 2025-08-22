@@ -19,14 +19,17 @@ import uvicorn
 from dotenv import load_dotenv
 
 from .agent import rag_agent, AgentDependencies
-from .db_utils import (
+from .unified_db_utils import (
     initialize_database,
     close_database,
     create_session,
     get_session,
     add_message,
     get_session_messages,
-    test_connection
+    test_connection,
+    health_check,
+    get_provider_info,
+    validate_configuration
 )
 from .graph_utils import initialize_graph, close_graph, test_graph_connection
 from .models import (
@@ -356,14 +359,17 @@ async def execute_agent(
 
 # API Endpoints
 @app.get("/health", response_model=HealthStatus)
-async def health_check():
+async def health_check_endpoint():
     """Health check endpoint."""
     try:
-        # Test database connections
-        db_status = await test_connection()
+        # Get comprehensive health check from unified utils
+        health_data = await health_check()
+        
+        # Test graph connection
         graph_status = await test_graph_connection()
         
         # Determine overall status
+        db_status = health_data.get("connection") == "ok"
         if db_status and graph_status:
             status = "healthy"
         elif db_status or graph_status:
@@ -377,7 +383,9 @@ async def health_check():
             graph_database=graph_status,
             llm_connection=True,  # Assume OK if we can respond
             version="0.1.0",
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
+            provider=health_data.get("provider", "unknown"),
+            stats=health_data.get("stats", {})
         )
         
     except Exception as e:
@@ -652,6 +660,38 @@ async def global_exception_handler(request: Request, exc: Exception):
         error_type=type(exc).__name__,
         request_id=str(uuid.uuid4())
     )
+
+
+# Additional endpoints for database provider information
+@app.get("/provider/info")
+async def get_provider_info_endpoint():
+    """Get information about the current database provider."""
+    try:
+        return await get_provider_info()
+    except Exception as e:
+        logger.error(f"Failed to get provider info: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get provider info")
+
+
+@app.get("/provider/validate")
+async def validate_provider_config():
+    """Validate the current database provider configuration."""
+    try:
+        return await validate_configuration()
+    except Exception as e:
+        logger.error(f"Failed to validate configuration: {e}")
+        raise HTTPException(status_code=500, detail="Failed to validate configuration")
+
+
+@app.get("/database/stats")
+async def get_database_stats_endpoint():
+    """Get database statistics."""
+    try:
+        from .unified_db_utils import get_database_stats
+        return await get_database_stats()
+    except Exception as e:
+        logger.error(f"Failed to get database stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get database stats")
 
 
 # Development server

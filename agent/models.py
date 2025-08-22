@@ -250,3 +250,5 @@ class HealthStatus(BaseModel):
     llm_connection: bool
     version: str
     timestamp: datetime
+    provider: Optional[str] = None
+    stats: Optional[Dict[str, Any]] = None
