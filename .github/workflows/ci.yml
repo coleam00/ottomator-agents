@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
@@ -103,3 +103,48 @@ jobs:
         # Run bandit for security issues, exclude test files
         bandit -r agent/ ingestion/ -ll --skip B101 || true
       continue-on-error: true
+
+  deployment-check:
+    name: Deployment Readiness
+    runs-on: ubuntu-latest
+    needs: [lint-and-check, security-check]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v5
+    
+    - name: Validate deployment files
+      run: |
+        echo "🔍 Checking deployment configuration..."
+        
+        # Check required files
+        if [ ! -f "requirements.txt" ]; then
+          echo "❌ requirements.txt missing"
+          exit 1
+        fi
+        
+        if [ ! -f "Procfile" ]; then
+          echo "❌ Procfile missing"
+          exit 1
+        fi
+        
+        if [ ! -f "gunicorn.conf.py" ]; then
+          echo "⚠️ gunicorn.conf.py missing (optional but recommended)"
+        fi
+        
+        echo "✅ Deployment files validated"
+    
+    - name: Deployment notification
+      run: |
+        echo "================================================"
+        echo "🚀 DEPLOYMENT STATUS"
+        echo "================================================"
+        echo "✅ All checks passed for commit: ${{ github.sha }}"
+        echo "📦 Branch: main"
+        echo "🔄 Render auto-deploy: ENABLED"
+        echo "🌐 Target URL: https://marypause-ai.onrender.com"
+        echo "================================================"
+        echo ""
+        echo "Render will automatically deploy this commit."
+        echo "Check deployment status at:"
+        echo "https://dashboard.render.com/web/srv-d2m587bipnbc738tbb8g/deploys"
