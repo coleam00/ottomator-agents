@@ -1,3 +1,6 @@
+# Render deployment configuration for MaryPause AI Medical RAG System
+# This file should be read by Render automatically
+# If Render ignores this file, the Procfile serves as backup
 services:
   - type: web
     name: marypause-ai

@@ -1,0 +1,1 @@
+web: gunicorn --config gunicorn.conf.py agent.api:app
