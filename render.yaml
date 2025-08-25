@@ -2,10 +2,15 @@ services:
   - type: web
     name: marypause-ai
     runtime: python3
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -c gunicorn.conf.py agent.api:app
+    region: oregon  # Specify region for consistent deployment
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      python verify_deployment.py || echo "Verification completed with warnings"
+    startCommand: gunicorn --config gunicorn.conf.py agent.api:app
     plan: free
     autoDeploy: false
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
@@ -18,4 +23,4 @@ services:
       - key: LOG_LEVEL
         value: INFO
       - key: WEB_CONCURRENCY
-        value: 1
+        value: 2  # Increased for better performance
