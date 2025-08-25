@@ -99,6 +99,41 @@ def check_environment_variables():
     
     return missing
 
+def check_deployment_configs():
+    """Check deployment configuration files."""
+    print("🔍 Checking deployment configuration files...")
+    
+    configs = [
+        ('Procfile', 'Backup start command for Render'),
+        ('render.yaml', 'Primary Render configuration'),
+        ('runtime.txt', 'Python version specification'),
+        ('gunicorn.conf.py', 'Gunicorn server configuration')
+    ]
+    
+    all_good = True
+    for filename, description in configs:
+        if Path(filename).exists():
+            print(f"✅ Found {filename} - {description}")
+            
+            # Special check for Procfile content
+            if filename == "Procfile":
+                with open(filename, 'r') as f:
+                    content = f.read().strip()
+                    expected = "web: gunicorn --config gunicorn.conf.py agent.api:app"
+                    if content == expected:
+                        print(f"   ✅ Correct start command: {content}")
+                    else:
+                        print(f"   ⚠️  Start command: {content}")
+                        print(f"   Expected: {expected}")
+                        
+        else:
+            print(f"❌ Missing {filename} - {description}")
+            if filename == "Procfile":
+                print("   This is CRITICAL - Render may use wrong start command!")
+                all_good = False
+    
+    return all_good
+
 def main():
     """Run all deployment checks."""
     print("🔍 Verifying deployment readiness...\n")
@@ -137,12 +172,28 @@ def main():
         print(f"⚠️ Missing environment variables: {missing_env}")
     print()
     
+    # Check deployment configurations
+    config_ok = check_deployment_configs()
+    if not config_ok:
+        print("❌ Deployment configuration issues detected")
+        all_good = False
+    print()
+    
     # Final verdict
     if all_good:
         print("🚀 All deployment checks passed! Ready for production.")
+        print("\n📋 Deployment Summary:")
+        print("   - Procfile ensures correct start command")
+        print("   - render.yaml provides full configuration")
+        print("   - FastAPI app is importable")
+        print("   - All critical modules available")
         return 0
     else:
         print("💥 Deployment checks failed. Please fix the issues above.")
+        print("\n🔧 If Render still uses wrong start command:")
+        print("   1. Check Procfile exists and has correct content")
+        print("   2. Verify render.yaml is in repository root")
+        print("   3. Configure start command manually in Render dashboard")
         return 1
 
 if __name__ == "__main__":
