@@ -3,11 +3,64 @@ Pydantic models for data validation and serialization.
 """
 
 import os
+import logging
 from typing import List, Dict, Any, Optional, Literal
 from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
+
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+
+
+def _safe_parse_int(env_var_name: str, default_value: int, min_value: Optional[int] = None, max_value: Optional[int] = None) -> int:
+    """
+    Safely parse an environment variable as an integer with validation and error handling.
+    
+    Args:
+        env_var_name: Name of the environment variable
+        default_value: Default value to use if parsing fails
+        min_value: Optional minimum value validation
+        max_value: Optional maximum value validation
+    
+    Returns:
+        int: The parsed integer value or default if parsing fails
+    """
+    env_value = os.getenv(env_var_name, str(default_value))
+    
+    # Handle empty string or None
+    if not env_value or not env_value.strip():
+        logger.warning(f"{env_var_name} is empty, using default {default_value}")
+        return default_value
+    
+    try:
+        parsed_value = int(env_value.strip())
+        
+        # Validate bounds if specified
+        if min_value is not None and parsed_value < min_value:
+            logger.warning(f"{env_var_name} must be >= {min_value}, got {parsed_value}. Using default {default_value}")
+            return default_value
+        elif max_value is not None and parsed_value > max_value:
+            logger.warning(f"{env_var_name} must be <= {max_value}, got {parsed_value}. Using default {default_value}")
+            return default_value
+        
+        return parsed_value
+        
+    except ValueError as e:
+        logger.warning(f"Invalid {env_var_name} value '{env_value}': {e}. Using default {default_value}")
+        return default_value
+
+
+def _get_vector_dimension() -> int:
+    """
+    Safely parse VECTOR_DIMENSION environment variable with robust error handling.
+    
+    Returns:
+        int: The vector dimension, defaulting to 3072 (Gemini gemini-embedding-001)
+    """
+    return _safe_parse_int("VECTOR_DIMENSION", 3072, min_value=1, max_value=10000)
 
 
 class MessageRole(str, Enum):
@@ -152,7 +205,7 @@ class Chunk(BaseModel):
     def validate_embedding(cls, v: Optional[List[float]]) -> Optional[List[float]]:
         """Validate embedding dimensions."""
         if v is not None:
-            expected_dims = int(os.getenv("VECTOR_DIMENSION", "3072"))
+            expected_dims = _get_vector_dimension()
             if len(v) != expected_dims:
                 raise ValueError(f"Embedding must have {expected_dims} dimensions, got {len(v)}")
         return v

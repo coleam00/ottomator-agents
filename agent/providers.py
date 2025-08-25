@@ -54,7 +54,7 @@ def get_embedding_model() -> str:
     Returns:
         Embedding model name
     """
-    return os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
+    return os.getenv('EMBEDDING_MODEL', 'gemini-embedding-001')
 
 
 def get_ingestion_model() -> OpenAIModel:
