@@ -325,7 +325,7 @@ class TestVectorSearch:
             mock_pool.acquire.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
             mock_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=None)
             
-            embedding = [0.1] * 1536  # Mock embedding
+            embedding = [0.1] * 3072  # Mock embedding
             results = await vector_search(embedding, limit=5)
             
             assert len(results) == 1
@@ -359,7 +359,7 @@ class TestVectorSearch:
             mock_pool.acquire.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
             mock_pool.acquire.return_value.__aexit__ = AsyncMock(return_value=None)
             
-            embedding = [0.1] * 1536
+            embedding = [0.1] * 3072
             results = await hybrid_search(
                 embedding=embedding,
                 query_text="test query",

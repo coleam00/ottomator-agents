@@ -48,7 +48,7 @@ pip install -r requirements.txt
 
 Execute the SQL in `sql/schema.sql` to create all necessary tables, indexes, and functions.
 
-Be sure to change the embedding dimensions on lines 31, 67, and 100 based on your embedding model. OpenAI's text-embedding-3-small is 1536 and nomic-embed-text from Ollama is 768 dimensions, for reference.
+Be sure to change the embedding dimensions on lines 31, 67, and 100 based on your embedding model. Gemini's gemini-embedding-001 is 3072 dimensions, OpenAI's text-embedding-3-small is 1536 and nomic-embed-text from Ollama is 768 dimensions, for reference.
 
 Note that this script will drop all tables before creating/recreating!
 
@@ -90,7 +90,7 @@ LLM_CHOICE=gpt-4.1-mini
 EMBEDDING_PROVIDER=openai
 EMBEDDING_BASE_URL=https://api.openai.com/v1
 EMBEDDING_API_KEY=sk-your-api-key
-EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_MODEL=gemini-embedding-001
 
 # Ingestion Configuration
 INGESTION_LLM_CHOICE=gpt-4.1-nano  # Faster model for processing

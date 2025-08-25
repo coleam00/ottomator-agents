@@ -25,6 +25,7 @@ cp .env.example .env  # Edit with your database credentials
 ### Database Setup
 ```bash
 # Execute schema creation (adjust embedding dimensions based on your model)
+# Gemini gemini-embedding-001: 3072 dimensions
 # OpenAI text-embedding-3-small: 1536 dimensions
 # Ollama nomic-embed-text: 768 dimensions
 psql -d "$DATABASE_URL" -f sql/schema.sql
@@ -118,7 +119,7 @@ LLM_CHOICE=gpt-4o-mini  # Must support tool/function calling
 
 # Embeddings
 EMBEDDING_PROVIDER=openai
-EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_MODEL=gemini-embedding-001
 EMBEDDING_API_KEY=sk-...
 
 # Ingestion (can use different/faster model)
@@ -133,6 +134,7 @@ LOG_LEVEL=INFO
 
 When setting up the database, ensure vector dimensions match your embedding model:
 - **Lines to modify in `sql/schema.sql`**: 31, 67, 100
+- Gemini gemini-embedding-001: 3072
 - OpenAI text-embedding-3-small: 1536
 - Ollama nomic-embed-text: 768
 

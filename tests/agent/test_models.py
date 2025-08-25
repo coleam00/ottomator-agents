@@ -248,7 +248,7 @@ class TestDatabaseModels:
         chunk = Chunk(
             document_id="doc-123",
             content="Test chunk content",
-            embedding=[0.1, 0.2, 0.3] + [0.0] * 1533,  # 1536 dimensions
+            embedding=[0.1, 0.2, 0.3] + [0.0] * 3069,  # 3072 dimensions
             chunk_index=0,
             metadata={"position": "start"},
             token_count=50
@@ -256,14 +256,14 @@ class TestDatabaseModels:
         
         assert chunk.document_id == "doc-123"
         assert chunk.content == "Test chunk content"
-        assert len(chunk.embedding) == 1536
+        assert len(chunk.embedding) == 3072
         assert chunk.chunk_index == 0
         assert chunk.token_count == 50
     
     def test_chunk_embedding_validation(self):
         """Test chunk embedding dimension validation."""
         # Test wrong dimension
-        with pytest.raises(ValueError, match="Embedding must have 1536 dimensions"):
+        with pytest.raises(ValueError, match="Embedding must have 3072 dimensions"):
             Chunk(
                 document_id="doc-123",
                 content="Test content",

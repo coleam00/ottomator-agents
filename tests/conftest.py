@@ -23,7 +23,7 @@ os.environ.setdefault("LLM_CHOICE", "gpt-4-turbo-preview")
 os.environ.setdefault("EMBEDDING_PROVIDER", "openai")
 os.environ.setdefault("EMBEDDING_BASE_URL", "https://api.openai.com/v1")
 os.environ.setdefault("EMBEDDING_API_KEY", "sk-test-key-for-testing")
-os.environ.setdefault("EMBEDDING_MODEL", "text-embedding-3-small")
+os.environ.setdefault("EMBEDDING_MODEL", "gemini-embedding-001")
 os.environ.setdefault("INGESTION_LLM_CHOICE", "gpt-4o-mini")
 
 
@@ -53,7 +53,7 @@ def mock_embedding_client():
         
         # Mock embedding response
         mock_embedding_response = Mock()
-        mock_embedding_response.data = [Mock(embedding=[0.1] * 1536)]
+        mock_embedding_response.data = [Mock(embedding=[0.1] * 3072)]
         mock_client.embeddings.create = AsyncMock(return_value=mock_embedding_response)
         
         mock_get_client.return_value = mock_client
@@ -206,7 +206,7 @@ def sample_chunks():
     
     # Add mock embeddings
     for chunk in chunks:
-        chunk.embedding = [0.1] * 1536
+        chunk.embedding = [0.1] * 3072
     
     return chunks
 
