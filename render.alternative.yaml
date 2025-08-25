@@ -1,0 +1,39 @@
+# Alternative Render deployment configuration
+# Use this if the main render.yaml still fails with module import issues
+
+services:
+  - type: web
+    name: marypause-ai-alt
+    runtime: python3
+    region: oregon
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      python -c "import sys; sys.path.insert(0, '.'); from agent.api import app; print('✅ FastAPI app import test successful')"
+      ls -la agent/
+    # Alternative startup methods (try in order if one fails):
+    # Method 1: Direct python module execution
+    startCommand: python -m uvicorn agent.api:app --host 0.0.0.0 --port $PORT --workers 2
+    # Method 2: Use custom start script
+    # startCommand: python start.py
+    # Method 3: Direct gunicorn with explicit path
+    # startCommand: PYTHONPATH=. gunicorn --config gunicorn.conf.py agent.api:app
+    
+    plan: free
+    autoDeploy: false
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: APP_ENV
+        value: production
+      - key: APP_HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: LOG_LEVEL
+        value: INFO
+      - key: WEB_CONCURRENCY
+        value: 2
+      - key: PYTHONPATH
+        value: .  # Ensure current directory is in Python path
