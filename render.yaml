@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: marypause-ai
+    runtime: python3
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -c gunicorn.conf.py agent.api:app
+    plan: free
+    autoDeploy: false
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: APP_ENV
+        value: production
+      - key: APP_HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: LOG_LEVEL
+        value: INFO
+      - key: WEB_CONCURRENCY
+        value: 1
