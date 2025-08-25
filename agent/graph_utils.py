@@ -14,8 +14,11 @@ from graphiti_core import Graphiti
 from graphiti_core.utils.maintenance.graph_data_operations import clear_data
 from graphiti_core.llm_client.config import LLMConfig
 from graphiti_core.llm_client.openai_client import OpenAIClient
+from graphiti_core.llm_client.gemini_client import GeminiClient
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
+from graphiti_core.embedder.gemini import GeminiEmbedder, GeminiEmbedderConfig
 from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerClient
+from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -77,35 +80,70 @@ class GraphitiClient:
             return
         
         try:
-            # Create LLMConfig
-            llm_config = LLMConfig(
-                api_key=self.llm_api_key,
-                model=self.llm_choice,
-                small_model=self.llm_choice,  # Can be the same as main model
-                base_url=self.llm_base_url
-            )
+            # Check LLM provider from environment (support both "gemini" and "google")
+            llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
+            embedding_provider = os.getenv("EMBEDDING_PROVIDER", "openai").lower()
             
-            # Create OpenAI LLM client
-            llm_client = OpenAIClient(config=llm_config)
-            
-            # Create OpenAI embedder
-            embedder = OpenAIEmbedder(
-                config=OpenAIEmbedderConfig(
-                    api_key=self.embedding_api_key,
-                    embedding_model=self.embedding_model,
-                    embedding_dim=self.embedding_dimensions,
-                    base_url=self.embedding_base_url
+            # Configure LLM client based on provider
+            if llm_provider in ["gemini", "google"]:
+                # Use Gemini for LLM
+                llm_config = LLMConfig(
+                    api_key=self.llm_api_key,
+                    model=self.llm_choice,
+                    small_model=os.getenv("INGESTION_LLM_CHOICE", self.llm_choice)  # Use lighter model for small tasks
                 )
-            )
+                llm_client = GeminiClient(config=llm_config)
+            else:
+                # Default to OpenAI-compatible client
+                llm_config = LLMConfig(
+                    api_key=self.llm_api_key,
+                    model=self.llm_choice,
+                    small_model=self.llm_choice,
+                    base_url=self.llm_base_url
+                )
+                llm_client = OpenAIClient(config=llm_config)
             
-            # Initialize Graphiti with custom clients
+            # Configure embedder based on provider
+            if embedding_provider in ["gemini", "google"]:
+                # Use Gemini for embeddings
+                embedder = GeminiEmbedder(
+                    config=GeminiEmbedderConfig(
+                        api_key=self.embedding_api_key,
+                        embedding_model=self.embedding_model,
+                        embedding_dim=self.embedding_dimensions  # Add missing embedding dimension
+                    )
+                )
+            else:
+                # Default to OpenAI embedder
+                embedder = OpenAIEmbedder(
+                    config=OpenAIEmbedderConfig(
+                        api_key=self.embedding_api_key,
+                        embedding_model=self.embedding_model,
+                        embedding_dim=self.embedding_dimensions,
+                        base_url=self.embedding_base_url
+                    )
+                )
+            
+            # Configure cross-encoder/reranker based on LLM provider
+            if llm_provider in ["gemini", "google"]:
+                # Use Gemini reranker with the lighter model
+                reranker_config = LLMConfig(
+                    api_key=self.llm_api_key,
+                    model=os.getenv("INGESTION_LLM_CHOICE", self.llm_choice)  # Use lighter model for reranking
+                )
+                cross_encoder = GeminiRerankerClient(config=reranker_config)
+            else:
+                # Default to OpenAI reranker
+                cross_encoder = OpenAIRerankerClient(client=llm_client, config=llm_config)
+            
+            # Initialize Graphiti with configured clients
             self.graphiti = Graphiti(
                 self.neo4j_uri,
                 self.neo4j_user,
                 self.neo4j_password,
                 llm_client=llm_client,
                 embedder=embedder,
-                cross_encoder=OpenAIRerankerClient(client=llm_client, config=llm_config)
+                cross_encoder=cross_encoder
             )
             
             # Build indices and constraints
@@ -323,34 +361,9 @@ class GraphitiClient:
             if self.graphiti:
                 await self.graphiti.close()
             
-            # Create OpenAI-compatible clients for reinitialization
-            llm_config = LLMConfig(
-                api_key=self.llm_api_key,
-                model=self.llm_choice,
-                small_model=self.llm_choice,
-                base_url=self.llm_base_url
-            )
-            
-            llm_client = OpenAIClient(config=llm_config)
-            
-            embedder = OpenAIEmbedder(
-                config=OpenAIEmbedderConfig(
-                    api_key=self.embedding_api_key,
-                    embedding_model=self.embedding_model,
-                    embedding_dim=self.embedding_dimensions,
-                    base_url=self.embedding_base_url
-                )
-            )
-            
-            self.graphiti = Graphiti(
-                self.neo4j_uri,
-                self.neo4j_user,
-                self.neo4j_password,
-                llm_client=llm_client,
-                embedder=embedder,
-                cross_encoder=OpenAIRerankerClient(client=llm_client, config=llm_config)
-            )
-            await self.graphiti.build_indices_and_constraints()
+            # Reinitialize with proper provider configuration
+            self._initialized = False
+            await self.initialize()
             
             logger.warning("Reinitialized Graphiti client (fresh indices created)")
 

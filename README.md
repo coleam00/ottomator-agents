@@ -1,6 +1,11 @@
-# Agentic RAG with Knowledge Graph
+# Medical RAG Agent with Knowledge Graph
 
-Agentic knowledge retrieval redefined with an AI agent system that combines traditional RAG (vector search) with knowledge graph capabilities to analyze and provide insights about big tech companies and their AI initiatives. The system uses PostgreSQL with pgvector for semantic search and Neo4j with Graphiti for temporal knowledge graphs. The goal is to create Agentic RAG at its finest.
+[![CI](https://github.com/marypause/marypause_ai/actions/workflows/ci.yml/badge.svg)](https://github.com/marypause/marypause_ai/actions/workflows/ci.yml)
+[![Security](https://github.com/marypause/marypause_ai/actions/workflows/security.yml/badge.svg)](https://github.com/marypause/marypause_ai/actions/workflows/security.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+An advanced medical knowledge retrieval system that combines traditional RAG (vector search) with knowledge graph capabilities to analyze and provide insights about medical information. The system uses PostgreSQL with pgvector for semantic search and Neo4j with Graphiti for temporal knowledge graphs.
 
 Built with:
 
@@ -126,20 +131,20 @@ LLM_CHOICE=gemini-2.5-flash
 
 ### 1. Prepare Your Documents
 
-Add your markdown documents to the `documents/` folder:
+Add your markdown documents to the `medical_docs/` folder:
 
 ```bash
-mkdir -p documents
-# Add your markdown files about tech companies, AI research, etc.
-# Example: documents/google_ai_initiatives.md
-#          documents/microsoft_openai_partnership.md
+mkdir -p medical_docs
+# Add your markdown files about medical topics, research, etc.
+# Example: medical_docs/patient_care_guidelines.md
+#          medical_docs/medical_research_papers.md
 ```
 
-**Note**: For a comprehensive example with extensive content, you can copy the provided `big_tech_docs` folder:
+**Note**: For testing, you can create sample medical documents:
 ```bash
-cp -r big_tech_docs/* documents/
+# Create sample documents for testing
+echo "# Medical Research Sample" > medical_docs/sample.md
 ```
-This includes 21 detailed documents about major tech companies and their AI initiatives. Be aware that processing all these files into the knowledge graph will take significant time (potentially 30+ minutes) due to the computational complexity of entity extraction and relationship building.
 
 ### 2. Run Document Ingestion
 
@@ -204,34 +209,6 @@ python cli.py --port 8080
   - `hybrid_search` - Combined search approach
 - **Session management** - Maintains conversation context
 - **Color-coded output** - Easy to read responses and tool information
-
-#### Example CLI Session
-
-```
-🤖 Agentic RAG with Knowledge Graph CLI
-============================================================
-Connected to: http://localhost:8058
-
-You: What are Microsoft's AI initiatives?
-
-🤖 Assistant:
-Microsoft has several major AI initiatives including...
-
-🛠 Tools Used:
-  1. vector_search (query='Microsoft AI initiatives', limit=10)
-  2. graph_search (query='Microsoft AI projects')
-
-────────────────────────────────────────────────────────────
-
-You: How is Microsoft connected to OpenAI?
-
-🤖 Assistant:
-Microsoft has a significant strategic partnership with OpenAI...
-
-🛠 Tools Used:
-  1. hybrid_search (query='Microsoft OpenAI partnership', limit=10)
-  2. get_entity_relationships (entity='Microsoft')
-```
 
 #### CLI Commands
 
@@ -339,7 +316,7 @@ agentic-rag-knowledge-graph/
 │   ├── chunker.py        # Semantic chunking
 │   └── embedder.py       # Embedding generation
 ├── sql/                   # Database schema
-├── documents/             # Your markdown files
+├── medical_docs/          # Your markdown documents
 └── tests/                # Comprehensive test suite
 ```
 

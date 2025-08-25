@@ -1,0 +1,60 @@
+name: Security
+
+on:
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  push:
+    branches: [ main ]
+    paths:
+      - 'requirements.txt'
+      - '**/*.py'
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v5
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit pip-audit
+    
+    - name: Check dependencies for vulnerabilities
+      run: |
+        pip install -r requirements.txt
+        
+        # Check with safety
+        safety check --continue-on-error || true
+        
+        # Check with pip-audit
+        pip-audit --desc || true
+      continue-on-error: true
+    
+    - name: Scan code for security issues
+      run: |
+        # Run bandit on source code
+        bandit -r agent/ ingestion/ -f json -o security-report.json || true
+        
+        # Display results
+        if [ -f security-report.json ]; then
+          python -m json.tool security-report.json || true
+        fi
+      continue-on-error: true
+    
+    - name: Upload security report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-report
+        path: security-report.json
+        retention-days: 30

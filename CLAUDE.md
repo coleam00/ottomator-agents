@@ -23,11 +23,27 @@ cp .env.example .env  # Edit with your database credentials
 ```
 
 ### Database Setup
+
+**For Supabase (recommended):**
+```bash
+# Schema is already applied to your Supabase project
+# Just configure your environment variables:
+DB_PROVIDER=supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Test your configuration
+python test_supabase_connection.py
+```
+
+**For Direct PostgreSQL:**
 ```bash
 # Execute schema creation (adjust embedding dimensions based on your model)
 # Gemini gemini-embedding-001: 3072 dimensions
 # OpenAI text-embedding-3-small: 1536 dimensions
+# Gemini gemini-embedding-001: 3072 dimensions
 # Ollama nomic-embed-text: 768 dimensions
+DB_PROVIDER=postgres
 psql -d "$DATABASE_URL" -f sql/schema.sql
 ```
 
@@ -68,6 +84,23 @@ pytest tests/agent/test_models.py::test_chat_request_model
 
 ## Architecture
 
+## Database Provider Support
+
+The system supports **two database providers** that can be switched via environment configuration:
+
+1. **Supabase** (recommended) - API-based connection using Supabase client
+   - ✅ No database password required
+   - ✅ Built-in connection management and scaling
+   - ✅ Integrated monitoring and backups
+   - ✅ Row Level Security support
+
+2. **PostgreSQL** (direct) - Direct database connection using asyncpg
+   - ✅ Full control over connection pooling
+   - ✅ Direct SQL execution for complex queries
+   - ✅ Lower latency for high-frequency operations
+
+**Switch providers** by setting `DB_PROVIDER=supabase` or `DB_PROVIDER=postgres` in your `.env` file.
+
 ### Component Organization
 
 The system is organized into three main layers:
@@ -103,7 +136,14 @@ The system is organized into three main layers:
 ### Critical Environment Variables
 
 ```bash
-# Database (PostgreSQL with pgvector)
+# Database Provider Selection
+DB_PROVIDER=supabase  # or "postgres" for direct connection
+
+# Option 1: Supabase (recommended)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Option 2: Direct PostgreSQL (alternative)
 DATABASE_URL=postgresql://user:password@host:port/dbname
 
 # Neo4j (for knowledge graph)

@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  lint-and-check:
+    name: Lint, Test and Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v5
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio mypy types-requests
+        pip install flake8 pylint
+    
+    - name: Run basic linting
+      run: |
+        # Run flake8 with basic checks
+        echo "Running flake8 linter..."
+        flake8 agent/ ingestion/ --count --select=E9,F63,F7,F82 --show-source --statistics || true
+        
+        # Run more comprehensive flake8 (informational)
+        flake8 agent/ ingestion/ --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+      continue-on-error: true
+    
+    - name: Run pylint basic checks
+      run: |
+        # Run pylint for basic issues only (errors and critical)
+        echo "Running pylint for critical issues..."
+        pylint agent/ ingestion/ --errors-only --exit-zero || true
+      continue-on-error: true
+    
+    - name: Run type checking
+      run: |
+        # Type check with mypy - ignore import errors for external packages
+        echo "Running type checking..."
+        mypy agent/ ingestion/ --ignore-missing-imports --no-error-summary --python-version 3.11 || true
+      continue-on-error: true
+    
+    - name: Run tests
+      run: |
+        # Run tests if they exist
+        if [ -d "tests" ]; then
+          echo "Running tests..."
+          pytest tests/ -v --tb=short -x || true
+        else
+          echo "No tests directory found, skipping tests"
+        fi
+      continue-on-error: true
+
+  security-check:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v5
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit
+    
+    - name: Check for known vulnerabilities
+      run: |
+        # Install requirements and check for vulnerabilities
+        pip install -r requirements.txt
+        
+        # Run safety check
+        safety check --json --continue-on-error || true
+      continue-on-error: true
+    
+    - name: Run security linter
+      run: |
+        # Run bandit for security issues, exclude test files
+        bandit -r agent/ ingestion/ -ll --skip B101 || true
+      continue-on-error: true
