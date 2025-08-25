@@ -63,7 +63,8 @@ APP_ENV = os.getenv("APP_ENV", "development")
 APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
 # Import safe parsing function from models
 from .models import _safe_parse_int
-APP_PORT = _safe_parse_int("APP_PORT", 8000, min_value=1, max_value=65535)
+# Render uses PORT environment variable, fallback to APP_PORT, then default
+APP_PORT = _safe_parse_int("PORT", _safe_parse_int("APP_PORT", 8000, min_value=1, max_value=65535), min_value=1, max_value=65535)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # Configure logging
