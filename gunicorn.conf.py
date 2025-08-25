@@ -11,11 +11,11 @@ backlog = 2048
 workers = int(os.getenv('WEB_CONCURRENCY', '2'))
 worker_class = "uvicorn.workers.UvicornWorker"
 worker_connections = 1000  # Connections per worker
-max_requests = 1200  # Slightly increased for better throughput
-max_requests_jitter = 150  # Proportional jitter
+max_requests = 1200  # Requests before recycling worker (prevents memory leaks)
+max_requests_jitter = 150  # Randomization to prevent all workers restarting at once
 
-# Thread workers for I/O bound tasks
-threads = 2
+# Thread workers for I/O bound tasks (only for sync workers, N/A for UvicornWorker)
+# threads = 2  # Commented out - not applicable to ASGI workers
 
 # Logging
 accesslog = "-"
@@ -43,9 +43,9 @@ module = "agent.api:app"
 preload_app = True
 
 # Timeout settings - optimized for medical RAG operations
-timeout = 180  # Increased for embedding generation and vector search
-keepalive = 5  # Improved for streaming responses
-graceful_timeout = 30
+timeout = 180  # Worker timeout for long-running operations (embedding generation, vector search)
+keepalive = 5  # Keep-alive timeout for persistent connections (good for streaming)
+graceful_timeout = 30  # Time to wait for workers to finish handling requests during shutdown
 
 # Memory management - prevents memory leaks
 # max_requests and max_requests_jitter already defined above
@@ -55,11 +55,20 @@ worker_tmp_dir = "/dev/shm"
 
 # Performance tuning
 max_worker_connections = 1000  # Total connections across all workers
-worker_recycle_limit = None
 
-# FastAPI/ASGI specific optimizations
-loop = "auto"  # Let uvicorn choose the best event loop
-http = "auto"  # Let uvicorn choose the best HTTP implementation
+# ASGI/Uvicorn specific optimizations
+# Note: These options are passed to the UvicornWorker class for optimal FastAPI performance
+worker_class_kwargs = {
+    "loop": "auto",  # Let uvicorn choose the best event loop (uvloop if available)
+    "http": "auto",  # Let uvicorn choose the best HTTP implementation (httptools if available)
+    "ws": "auto",    # WebSocket implementation (though not used in this API)
+    "lifespan": "auto",  # ASGI lifespan protocol handling
+}
+
+# Alternative: If worker_class_kwargs doesn't work in your Gunicorn version,
+# you can set these via environment variables before starting Gunicorn:
+# export UVICORN_LOOP=auto
+# export UVICORN_HTTP=auto
 
 # Enable access logging in production for monitoring
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
