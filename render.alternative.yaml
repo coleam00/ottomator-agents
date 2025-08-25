@@ -37,3 +37,10 @@ services:
         value: 2
       - key: PYTHONPATH
         value: .  # Ensure current directory is in Python path
+      # Uvicorn performance optimizations
+      - key: UVICORN_LOOP
+        value: auto
+      - key: UVICORN_HTTP
+        value: auto
+      - key: UVICORN_LIFESPAN
+        value: auto

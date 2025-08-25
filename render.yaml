@@ -24,3 +24,10 @@ services:
         value: INFO
       - key: WEB_CONCURRENCY
         value: 2  # Increased for better performance
+      # Uvicorn performance optimizations (replaces invalid worker_class_kwargs)
+      - key: UVICORN_LOOP
+        value: auto  # Let uvicorn choose the best event loop (uvloop if available)
+      - key: UVICORN_HTTP
+        value: auto  # Let uvicorn choose the best HTTP implementation (httptools if available)
+      - key: UVICORN_LIFESPAN
+        value: auto  # ASGI lifespan protocol handling
