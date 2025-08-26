@@ -67,6 +67,10 @@ from .models import _safe_parse_int
 APP_PORT = _safe_parse_int("PORT", _safe_parse_int("APP_PORT", 8000, min_value=1, max_value=65535), min_value=1, max_value=65535)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+# Background task management
+background_tasks: List[asyncio.Task] = []
+EPISODIC_MEMORY_TIMEOUT = float(os.getenv("EPISODIC_MEMORY_TIMEOUT", "30.0"))  # seconds
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL.upper()),
@@ -114,6 +118,21 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down agentic RAG API...")
     
     try:
+        # Cancel all background tasks
+        for task in background_tasks:
+            if not task.done():
+                task.cancel()
+        
+        # Wait for tasks to complete with timeout
+        if background_tasks:
+            try:
+                await asyncio.wait_for(
+                    asyncio.gather(*background_tasks, return_exceptions=True),
+                    timeout=5.0
+                )
+            except asyncio.TimeoutError:
+                logger.warning("Some background tasks did not complete in time")
+        
         await close_database()
         await close_graph()
         logger.info("Connections closed")
@@ -260,16 +279,18 @@ async def save_conversation_turn(
     session_id: str,
     user_message: str,
     assistant_message: str,
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    tools_used: Optional[List[ToolCall]] = None
 ):
     """
-    Save a conversation turn to the database.
+    Save a conversation turn to the database and create episodic memory.
     
     Args:
         session_id: Session ID
         user_message: User's message
         assistant_message: Assistant's response
         metadata: Optional metadata
+        tools_used: List of tools used in the conversation
     """
     # Save user message
     await add_message(
@@ -286,6 +307,67 @@ async def save_conversation_turn(
         content=assistant_message,
         metadata=metadata or {}
     )
+    
+    # Create episodic memory asynchronously with proper task management
+    try:
+        from .episodic_memory import episodic_memory_service
+        
+        # Convert tools_used to dict format
+        tools_dict = None
+        if tools_used:
+            tools_dict = [{"tool_name": t.tool_name} for t in tools_used]
+        
+        # Create managed background task with timeout
+        task = asyncio.create_task(
+            _create_episodic_memory_with_timeout(
+                session_id=session_id,
+                user_message=user_message,
+                assistant_message=assistant_message,
+                tools_dict=tools_dict,
+                metadata=metadata
+            )
+        )
+        
+        # Add to background tasks list for lifecycle management
+        background_tasks.append(task)
+        
+        # Clean up completed tasks periodically
+        global background_tasks
+        background_tasks = [t for t in background_tasks if not t.done()]
+        
+        logger.debug(f"Initiated managed episodic memory creation for session {session_id}")
+    except Exception as e:
+        logger.error(f"Failed to create episodic memory task: {e}")
+        # Don't fail the conversation if episodic memory fails
+
+
+async def _create_episodic_memory_with_timeout(
+    session_id: str,
+    user_message: str,
+    assistant_message: str,
+    tools_dict: Optional[List[Dict[str, Any]]],
+    metadata: Optional[Dict[str, Any]]
+):
+    """Create episodic memory with timeout and error handling."""
+    try:
+        from .episodic_memory import episodic_memory_service
+        
+        # Apply timeout to episodic memory creation
+        await asyncio.wait_for(
+            episodic_memory_service.create_conversation_episode(
+                session_id=session_id,
+                user_message=user_message,
+                assistant_response=assistant_message,
+                tools_used=tools_dict,
+                metadata=metadata
+            ),
+            timeout=EPISODIC_MEMORY_TIMEOUT
+        )
+        logger.info(f"Successfully created episodic memory for session {session_id}")
+    except asyncio.TimeoutError:
+        logger.error(f"Episodic memory creation timed out after {EPISODIC_MEMORY_TIMEOUT}s for session {session_id}")
+    except Exception as e:
+        logger.error(f"Failed to create episodic memory for session {session_id}: {e}")
 
 
 async def execute_agent(
@@ -340,7 +422,8 @@ async def execute_agent(
                 metadata={
                     "user_id": user_id,
                     "tool_calls": len(tools_used)
-                }
+                },
+                tools_used=tools_used
             )
         
         return response, tools_used

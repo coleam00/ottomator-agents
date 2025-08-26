@@ -20,13 +20,15 @@ from .tools import (
     list_documents_tool,
     get_entity_relationships_tool,
     get_entity_timeline_tool,
+    episodic_memory_search_tool,
     VectorSearchInput,
     GraphSearchInput,
     HybridSearchInput,
     DocumentInput,
     DocumentListInput,
     EntityRelationshipInput,
-    EntityTimelineInput
+    EntityTimelineInput,
+    EpisodicSearchInput
 )
 
 # Load environment variables
@@ -308,3 +310,45 @@ async def get_entity_timeline(
     )
     
     return await get_entity_timeline_tool(input_data)
+
+
+@rag_agent.tool
+async def episodic_memory(
+    ctx: RunContext[AgentDependencies],
+    query: str
+) -> List[Dict[str, Any]]:
+    """
+    Search episodic memory from previous conversations.
+    
+    This tool searches the conversation history stored in the knowledge graph
+    to find relevant information from past interactions. It helps maintain
+    context across sessions and remember important facts discussed previously.
+    Use this to recall what was discussed in earlier conversations, especially
+    for personalized information about the user's health concerns or symptoms.
+    
+    Args:
+        query: What to search for in conversation history
+    
+    Returns:
+        List of relevant episodic memories with facts and timestamps
+    """
+    # Use session and user context from dependencies
+    input_data = EpisodicSearchInput(
+        query=query,
+        session_id=ctx.deps.session_id if ctx.deps else None,
+        user_id=ctx.deps.user_id if ctx.deps else None,
+        limit=10
+    )
+    
+    results = await episodic_memory_search_tool(input_data)
+    
+    # Convert results to dict for agent
+    return [
+        {
+            "fact": r.fact,
+            "uuid": r.uuid,
+            "valid_at": r.valid_at,
+            "source": "conversation_history"
+        }
+        for r in results
+    ]

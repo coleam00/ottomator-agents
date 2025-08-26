@@ -23,7 +23,8 @@ from .graph_utils import (
     get_entity_relationships,
     graph_client
 )
-from .models import ChunkResult, GraphSearchResult, DocumentMetadata
+from .episodic_memory import episodic_memory_service
+from .models import ChunkResult, GraphSearchResult, DocumentMetadata, _safe_parse_int
 from .providers import get_embedding_client, get_embedding_model
 
 # Load environment variables
@@ -36,22 +37,52 @@ embedding_client = get_embedding_client()
 EMBEDDING_MODEL = get_embedding_model()
 
 
+def normalize_embedding_dimension(embedding: List[float], target_dimension: int = 1536) -> List[float]:
+    """
+    Normalize embedding to exact target dimension (truncate or pad as needed).
+    Simple inline version for tools module.
+    """
+    import numpy as np
+    
+    current_dim = len(embedding)
+    if current_dim == target_dimension:
+        return embedding
+    elif current_dim > target_dimension:
+        # Truncate and renormalize
+        truncated = embedding[:target_dimension]
+        norm = np.linalg.norm(truncated)
+        if norm > 0:
+            truncated = (np.array(truncated) / norm).tolist()
+        return truncated
+    else:
+        # Pad with zeros
+        return embedding + [0.0] * (target_dimension - current_dim)
+
+
 async def generate_embedding(text: str) -> List[float]:
     """
-    Generate embedding for text using OpenAI.
+    Generate embedding for text using configured provider.
     
     Args:
         text: Text to embed
     
     Returns:
-        Embedding vector
+        Embedding vector normalized to target dimension
     """
     try:
         response = await embedding_client.embeddings.create(
             model=EMBEDDING_MODEL,
             input=text
         )
-        return response.data[0].embedding
+        
+        # Get target dimension from environment
+        target_dim = _safe_parse_int("VECTOR_DIMENSION", 1536, min_value=1, max_value=10000)
+        
+        # Normalize embedding to target dimension
+        embedding = response.data[0].embedding
+        normalized_embedding = normalize_embedding_dimension(embedding, target_dim)
+        
+        return normalized_embedding
     except Exception as e:
         logger.error(f"Failed to generate embedding: {e}")
         raise
@@ -98,6 +129,14 @@ class EntityTimelineInput(BaseModel):
     entity_name: str = Field(..., description="Name of the entity")
     start_date: Optional[str] = Field(None, description="Start date (ISO format)")
     end_date: Optional[str] = Field(None, description="End date (ISO format)")
+
+
+class EpisodicSearchInput(BaseModel):
+    """Input for episodic memory search."""
+    query: str = Field(..., description="Search query for episodic memories")
+    session_id: Optional[str] = Field(None, description="Filter by session ID")
+    user_id: Optional[str] = Field(None, description="Filter by user ID")
+    limit: int = Field(default=10, description="Maximum number of results")
 
 
 # Tool Implementation Functions
@@ -331,6 +370,46 @@ async def get_entity_timeline_tool(input_data: EntityTimelineInput) -> List[Dict
         
     except Exception as e:
         logger.error(f"Entity timeline query failed: {e}")
+        return []
+
+
+async def episodic_memory_search_tool(input_data: EpisodicSearchInput) -> List[GraphSearchResult]:
+    """
+    Search episodic memory from previous conversations.
+    
+    This tool searches the conversation history stored in the knowledge graph
+    to find relevant information from past interactions. Useful for maintaining
+    context across sessions and remembering important facts discussed previously.
+    
+    Args:
+        input_data: Search parameters for episodic memory
+    
+    Returns:
+        List of relevant episodic memories
+    """
+    try:
+        # Search episodic memories
+        results = await episodic_memory_service.search_episodic_memories(
+            query=input_data.query,
+            session_id=input_data.session_id,
+            user_id=input_data.user_id,
+            limit=input_data.limit
+        )
+        
+        # Convert to GraphSearchResult format for consistency
+        return [
+            GraphSearchResult(
+                fact=r.get("fact", r.get("content", "")),
+                uuid=r.get("uuid", ""),
+                valid_at=r.get("valid_at"),
+                invalid_at=r.get("invalid_at"),
+                source_node_uuid=r.get("source_node_uuid")
+            )
+            for r in results
+        ]
+        
+    except Exception as e:
+        logger.error(f"Episodic memory search failed: {e}")
         return []
 
 
