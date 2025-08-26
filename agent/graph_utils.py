@@ -170,10 +170,13 @@ class GraphitiClient:
         content: str,
         source: str,
         timestamp: Optional[datetime] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        entity_types: Optional[Dict[str, Any]] = None,
+        edge_types: Optional[Dict[str, Any]] = None,
+        edge_type_map: Optional[Dict[tuple, List[str]]] = None
     ):
         """
-        Add an episode to the knowledge graph.
+        Add an episode to the knowledge graph with optional custom entity types.
         
         Args:
             episode_id: Unique episode identifier
@@ -181,6 +184,9 @@ class GraphitiClient:
             source: Source of the content
             timestamp: Episode timestamp
             metadata: Additional metadata
+            entity_types: Custom entity types for extraction
+            edge_types: Custom edge types for relationships
+            edge_type_map: Mapping of entity pairs to edge types
         """
         if not self._initialized:
             await self.initialize()
@@ -190,15 +196,28 @@ class GraphitiClient:
         # Import EpisodeType for proper source handling
         from graphiti_core.nodes import EpisodeType
         
-        await self.graphiti.add_episode(
-            name=episode_id,
-            episode_body=content,
-            source=EpisodeType.text,  # Always use text type for our content
-            source_description=source,
-            reference_time=episode_timestamp
-        )
+        # Prepare kwargs for add_episode
+        episode_kwargs = {
+            "name": episode_id,
+            "episode_body": content,
+            "source": EpisodeType.text,  # Always use text type for our content
+            "source_description": source,
+            "reference_time": episode_timestamp
+        }
         
-        logger.info(f"Added episode {episode_id} to knowledge graph")
+        # Add custom entity types if provided
+        if entity_types:
+            episode_kwargs["entity_types"] = entity_types
+        
+        if edge_types:
+            episode_kwargs["edge_types"] = edge_types
+            
+        if edge_type_map:
+            episode_kwargs["edge_type_map"] = edge_type_map
+        
+        await self.graphiti.add_episode(**episode_kwargs)
+        
+        logger.info(f"Added episode {episode_id} to knowledge graph with custom entities: {bool(entity_types)}")
     
     async def search(
         self,
@@ -345,6 +364,255 @@ class GraphitiClient:
                 "graphiti_initialized": False,
                 "error": str(e)
             }
+    
+    async def add_conversation_episode(
+        self,
+        session_id: str,
+        user_message: str,
+        assistant_response: str,
+        tools_used: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
+        """
+        Add a conversation turn as an episode to the knowledge graph.
+        
+        Args:
+            session_id: Session identifier
+            user_message: User's message
+            assistant_response: Assistant's response
+            tools_used: List of tools used
+            metadata: Additional metadata
+        
+        Returns:
+            Episode ID if successful
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        try:
+            # Generate episode ID
+            from uuid import uuid4
+            episode_id = f"conversation_{session_id}_{uuid4().hex[:8]}"
+            timestamp = datetime.now(timezone.utc)
+            
+            # Format conversation content
+            content_parts = [
+                f"User: {user_message}",
+                f"Assistant: {assistant_response}"
+            ]
+            
+            if tools_used:
+                content_parts.append(f"Tools Used: {', '.join(tools_used)}")
+            
+            content = "\n\n".join(content_parts)
+            
+            # Add metadata
+            episode_metadata = {
+                "session_id": session_id,
+                "conversation_turn": True,
+                "tools_used": tools_used or [],
+                **(metadata or {})
+            }
+            
+            # Add to Graphiti
+            await self.add_episode(
+                episode_id=episode_id,
+                content=content,
+                source=f"conversation_session_{session_id}",
+                timestamp=timestamp,
+                metadata=episode_metadata
+            )
+            
+            logger.info(f"Added conversation episode: {episode_id}")
+            return episode_id
+            
+        except Exception as e:
+            logger.error(f"Failed to add conversation episode: {e}")
+            return None
+    
+    async def get_session_episodes(
+        self,
+        session_id: str,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all episodes for a specific session.
+        
+        Args:
+            session_id: Session identifier
+            limit: Maximum number of episodes to return
+        
+        Returns:
+            List of episodes from the session
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        try:
+            # Search for episodes from this session
+            results = await self.search(f"session {session_id} conversations")
+            
+            # Filter results to only those from this session
+            session_episodes = []
+            for result in results[:limit]:
+                # Check if this result is from the session
+                if session_id in result.get("fact", ""):
+                    session_episodes.append(result)
+            
+            return session_episodes
+            
+        except Exception as e:
+            logger.error(f"Failed to get session episodes: {e}")
+            return []
+    
+    async def get_user_episodes(
+        self,
+        user_id: str,
+        limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all episodes for a specific user across sessions.
+        
+        Args:
+            user_id: User identifier
+            limit: Maximum number of episodes to return
+        
+        Returns:
+            List of user's episodes
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        try:
+            # Search for user-specific episodes
+            results = await self.search(f"user {user_id} conversations history")
+            
+            # Return limited results
+            return results[:limit]
+            
+        except Exception as e:
+            logger.error(f"Failed to get user episodes: {e}")
+            return []
+    
+    async def extract_conversation_facts(
+        self,
+        conversation: str,
+        session_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Extract facts from a conversation using Graphiti.
+        
+        Args:
+            conversation: Conversation text
+            session_id: Optional session identifier
+        
+        Returns:
+            List of extracted facts
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        try:
+            # Create a temporary episode to extract facts
+            from uuid import uuid4
+            temp_episode_id = f"fact_extraction_{uuid4().hex[:8]}"
+            
+            # Add episode (Graphiti will extract facts)
+            await self.add_episode(
+                episode_id=temp_episode_id,
+                content=conversation,
+                source=f"fact_extraction_{session_id}" if session_id else "fact_extraction",
+                timestamp=datetime.now(timezone.utc)
+            )
+            
+            # Search for the facts from this episode
+            results = await self.search(conversation[:100])  # Use first 100 chars as query
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Failed to extract conversation facts: {e}")
+            return []
+    
+    async def add_fact_triples(
+        self,
+        triples: List[Tuple[str, str, str]],
+        episode_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Add fact triples to the knowledge graph.
+        
+        Args:
+            triples: List of (subject, predicate, object) tuples
+            episode_id: Optional episode ID to associate with facts
+        
+        Returns:
+            List of results for each triple (success/error status)
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        results = []
+        
+        for subject, predicate, obj in triples:
+            try:
+                # Validate input
+                if not all([subject, predicate, obj]):
+                    results.append({
+                        "triple": (subject, predicate, obj),
+                        "status": "error",
+                        "message": "Invalid triple: missing component"
+                    })
+                    continue
+                
+                # Import required Graphiti components
+                from graphiti_core.nodes import EntityNode
+                from graphiti_core.edges import EntityEdge
+                import uuid
+                
+                # Create nodes for subject and object
+                subject_node = EntityNode(
+                    uuid=str(uuid.uuid4()),
+                    name=str(subject),
+                    group_id=episode_id or ""
+                )
+                
+                object_node = EntityNode(
+                    uuid=str(uuid.uuid4()),
+                    name=str(obj),
+                    group_id=episode_id or ""
+                )
+                
+                # Create edge for the relationship
+                edge = EntityEdge(
+                    group_id=episode_id or "",
+                    source_node_uuid=subject_node.uuid,
+                    target_node_uuid=object_node.uuid,
+                    created_at=datetime.now(timezone.utc),
+                    name=str(predicate),
+                    fact=f"{subject} {predicate} {obj}"
+                )
+                
+                # Add triplet to graph (Graphiti will handle deduplication)
+                await self.graphiti.add_triplet(subject_node, edge, object_node)
+                
+                results.append({
+                    "triple": (subject, predicate, obj),
+                    "status": "success",
+                    "message": "Added to graph"
+                })
+                
+                logger.debug(f"Added fact triple: ({subject}, {predicate}, {obj})")
+                
+            except Exception as e:
+                logger.error(f"Failed to add fact triple ({subject}, {predicate}, {obj}): {e}")
+                results.append({
+                    "triple": (subject, predicate, obj),
+                    "status": "error",
+                    "message": str(e)
+                })
+        
+        return results
     
     async def clear_graph(self):
         """Clear all data from the graph (USE WITH CAUTION)."""

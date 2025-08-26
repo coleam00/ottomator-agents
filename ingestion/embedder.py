@@ -13,6 +13,7 @@ from openai import RateLimitError, APIError
 from dotenv import load_dotenv
 
 from .chunker import DocumentChunk
+from .embedding_truncator import normalize_embedding_dimension, get_target_dimension
 
 # Import flexible providers
 try:
@@ -93,7 +94,12 @@ class EmbeddingGenerator:
                     input=text
                 )
                 
-                return response.data[0].embedding
+                # Get the embedding and normalize to target dimension
+                embedding = response.data[0].embedding
+                target_dim = get_target_dimension()
+                normalized_embedding = normalize_embedding_dimension(embedding, target_dim)
+                
+                return normalized_embedding
                 
             except RateLimitError as e:
                 if attempt == self.max_retries - 1:
@@ -149,7 +155,14 @@ class EmbeddingGenerator:
                     input=processed_texts
                 )
                 
-                return [data.embedding for data in response.data]
+                # Normalize all embeddings to target dimension
+                target_dim = get_target_dimension()
+                normalized_embeddings = [
+                    normalize_embedding_dimension(data.embedding, target_dim) 
+                    for data in response.data
+                ]
+                
+                return normalized_embeddings
                 
             except RateLimitError as e:
                 if attempt == self.max_retries - 1:

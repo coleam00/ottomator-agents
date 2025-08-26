@@ -73,7 +73,7 @@ CREATE TABLE chunks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
-    embedding vector(3072), -- Gemini gemini-embedding-001 dimension
+    embedding vector(1536), -- Truncated for Supabase IVFFlat compatibility (from Gemini 3072)
     chunk_index INTEGER NOT NULL,
     metadata JSONB DEFAULT '{}' NOT NULL,
     token_count INTEGER,
@@ -133,7 +133,7 @@ CREATE INDEX idx_messages_role ON messages (role);
 
 -- Function: Vector similarity search
 CREATE OR REPLACE FUNCTION match_chunks(
-    query_embedding vector(3072),
+    query_embedding vector(1536),
     match_count INT DEFAULT 10,
     similarity_threshold FLOAT DEFAULT 0.0
 )
@@ -174,7 +174,7 @@ $$;
 
 -- Function: Hybrid search combining vector and text search
 CREATE OR REPLACE FUNCTION hybrid_search(
-    query_embedding vector(3072),
+    query_embedding vector(1536),
     query_text TEXT,
     match_count INT DEFAULT 10,
     text_weight FLOAT DEFAULT 0.3,
