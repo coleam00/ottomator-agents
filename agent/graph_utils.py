@@ -26,6 +26,11 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Suppress Neo4j property warnings that are not actual errors
+# These warnings occur when Graphiti checks for optional properties
+neo4j_logger = logging.getLogger("neo4j")
+neo4j_logger.setLevel(logging.ERROR)  # Only show errors, not warnings
+
 # Help from this PR for setting up the custom clients: https://github.com/getzep/graphiti/pull/601/files
 class GraphitiClient:
     """Manages Graphiti knowledge graph operations."""

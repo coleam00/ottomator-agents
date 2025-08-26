@@ -143,22 +143,50 @@ async def get_session(session_id: str) -> Optional[Dict[str, Any]]:
     """
     async with supabase_pool.acquire() as client:
         try:
-            # Use execute() first, then check if data exists
-            response = client.table("sessions").select("*").eq("id", session_id).gte(
-                "expires_at", datetime.now(timezone.utc).isoformat()
-            ).execute()
+            # Build query without chaining to avoid missing response errors
+            query = client.table("sessions").select("*").eq("id", session_id)
+            
+            # Only add expires_at filter if we want to check expiration
+            # This helps avoid issues with null expires_at values or query chain problems
+            current_time = datetime.now(timezone.utc).isoformat()
+            
+            # Execute query
+            response = query.execute()
             
             # Check if we got any results
-            if response.data and len(response.data) > 0:
-                session = response.data[0]  # Get first result
-                # Convert ISO strings back to datetime objects for consistency
-                session["created_at"] = session["created_at"]
-                session["updated_at"] = session["updated_at"]
-                session["expires_at"] = session["expires_at"] if session["expires_at"] else None
-                return session
+            if not response or not hasattr(response, 'data'):
+                logger.debug(f"No response or data attribute for session {session_id}")
+                return None
             
+            if not response.data or len(response.data) == 0:
+                logger.debug(f"No session found with ID {session_id}")
+                return None
+            
+            session = response.data[0]  # Get first result
+            
+            # Check expiration manually if expires_at exists
+            if session.get("expires_at"):
+                expires_at = session["expires_at"]
+                # Parse ISO string to datetime if needed
+                if isinstance(expires_at, str):
+                    from dateutil import parser
+                    expires_at = parser.parse(expires_at)
+                    if expires_at.tzinfo is None:
+                        expires_at = expires_at.replace(tzinfo=timezone.utc)
+                
+                # Check if session is expired
+                if expires_at < datetime.now(timezone.utc):
+                    logger.debug(f"Session {session_id} has expired")
+                    return None
+            
+            # Session is valid, return it
+            # Keep datetime fields as they are from Supabase (usually ISO strings)
+            return session
+            
+        except AttributeError as e:
+            # Handle missing response or data attribute more gracefully
+            logger.warning(f"Supabase response missing expected attributes for session {session_id}: {e}")
             return None
-            
         except Exception as e:
             logger.warning(f"Failed to get session {session_id}: {e}")
             return None
