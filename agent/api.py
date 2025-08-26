@@ -329,10 +329,10 @@ async def save_conversation_turn(
         )
         
         # Add to background tasks list for lifecycle management
+        global background_tasks
         background_tasks.append(task)
         
         # Clean up completed tasks periodically
-        global background_tasks
         background_tasks = [t for t in background_tasks if not t.done()]
         
         logger.debug(f"Initiated managed episodic memory creation for session {session_id}")
