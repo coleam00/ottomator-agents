@@ -142,19 +142,26 @@ async def get_session(session_id: str) -> Optional[Dict[str, Any]]:
         Session data or None if not found/expired
     """
     async with supabase_pool.acquire() as client:
-        response = client.table("sessions").select("*").eq("id", session_id).gte(
-            "expires_at", datetime.now(timezone.utc).isoformat()
-        ).maybe_single().execute()
-        
-        if response.data:
-            session = response.data
-            # Convert ISO strings back to datetime objects for consistency
-            session["created_at"] = session["created_at"]
-            session["updated_at"] = session["updated_at"]
-            session["expires_at"] = session["expires_at"] if session["expires_at"] else None
-            return session
-        
-        return None
+        try:
+            # Use execute() first, then check if data exists
+            response = client.table("sessions").select("*").eq("id", session_id).gte(
+                "expires_at", datetime.now(timezone.utc).isoformat()
+            ).execute()
+            
+            # Check if we got any results
+            if response.data and len(response.data) > 0:
+                session = response.data[0]  # Get first result
+                # Convert ISO strings back to datetime objects for consistency
+                session["created_at"] = session["created_at"]
+                session["updated_at"] = session["updated_at"]
+                session["expires_at"] = session["expires_at"] if session["expires_at"] else None
+                return session
+            
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Failed to get session {session_id}: {e}")
+            return None
 
 
 async def update_session(session_id: str, metadata: Dict[str, Any]) -> bool:

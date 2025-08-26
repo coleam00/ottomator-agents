@@ -444,6 +444,25 @@ async def execute_agent(
 
 
 # API Endpoints
+@app.get("/")
+async def root():
+    """Root endpoint - API information."""
+    return {
+        "name": "Agentic RAG with Knowledge Graph",
+        "version": "0.1.0",
+        "status": "operational",
+        "endpoints": {
+            "health": "/health",
+            "chat": "/chat",
+            "chat_stream": "/chat/stream",
+            "search": "/search/*",
+            "documents": "/documents",
+            "docs": "/docs",
+            "redoc": "/redoc"
+        }
+    }
+
+
 @app.get("/health", response_model=HealthStatus)
 async def health_check_endpoint():
     """Health check endpoint."""
