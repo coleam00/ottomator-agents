@@ -26,6 +26,11 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Suppress Neo4j property warnings that are not actual errors
+# These warnings occur when Graphiti checks for optional properties
+neo4j_logger = logging.getLogger("neo4j")
+neo4j_logger.setLevel(logging.ERROR)  # Only show errors, not warnings
+
 # Help from this PR for setting up the custom clients: https://github.com/getzep/graphiti/pull/601/files
 class GraphitiClient:
     """Manages Graphiti knowledge graph operations."""
@@ -552,7 +557,8 @@ class GraphitiClient:
     async def add_fact_triples(
         self,
         triples: List[Tuple[str, str, str]],
-        episode_id: Optional[str] = None
+        episode_id: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Add fact triples to the knowledge graph.
@@ -585,8 +591,8 @@ class GraphitiClient:
                 from graphiti_core.edges import EntityEdge
                 import uuid
                 
-                # Use group_id="0" for shared facts, or the episode_id if it's user-specific
-                fact_group_id = "0" if not episode_id or episode_id.startswith("knowledge_") else episode_id
+                # Use user_id for user-specific facts, or "0" for shared facts
+                fact_group_id = user_id if user_id else "0"
                 
                 # Create nodes for subject and object
                 subject_node = EntityNode(
@@ -608,7 +614,8 @@ class GraphitiClient:
                     target_node_uuid=object_node.uuid,
                     created_at=datetime.now(timezone.utc),
                     name=str(predicate),
-                    fact=f"{subject} {predicate} {obj}"
+                    fact=f"{subject} {predicate} {obj}",
+                    episode_id=episode_id  # Store episode_id as metadata if needed
                 )
                 
                 # Add triplet to graph (Graphiti will handle deduplication)

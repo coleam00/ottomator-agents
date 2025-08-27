@@ -463,6 +463,42 @@ async def root():
     }
 
 
+@app.post("/api/users/register-neo4j")
+async def register_neo4j_user(request: Request):
+    """
+    Register a user in Neo4j/Graphiti knowledge graph.
+    This endpoint is kept for compatibility but registration happens automatically
+    through group_id partitioning when the user creates their first episode.
+    
+    Expected payload:
+    {
+        "user_id": "uuid-string"
+    }
+    """
+    try:
+        # Parse request body
+        data = await request.json()
+        user_id = data.get("user_id")
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id is required")
+        
+        # With group_id partitioning, users are automatically isolated
+        # No explicit registration needed - just return success
+        logger.info(f"User {user_id} will be automatically isolated via group_id")
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "message": "User isolation enabled via group_id partitioning"
+        }
+            
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    except Exception as e:
+        logger.error(f"Error in user registration endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/health", response_model=HealthStatus)
 async def health_check_endpoint():
     """Health check endpoint."""

@@ -148,10 +148,14 @@ class EpisodicMemoryService:
                 group_id=user_id  # Use user_id as group_id for user isolation
             )
             
-            # Store fact triples in knowledge graph
+            # Store fact triples in knowledge graph with user_id
             if facts:
                 try:
-                    results = await self.graph_client.add_fact_triples(facts, episode_id)
+                    results = await self.graph_client.add_fact_triples(
+                        facts, 
+                        episode_id=episode_id,
+                        user_id=user_id  # Pass user_id for proper isolation
+                    )
                     success_count = sum(1 for r in results if r["status"] == "success")
                     logger.info(f"Added {success_count}/{len(facts)} fact triples to knowledge graph")
                     
@@ -441,8 +445,11 @@ class EpisodicMemoryService:
             return []
             
         try:
-            # Search for user-specific memories
-            results = await self.graph_client.search(f"user {user_id} conversations")
+            # Search for user-specific memories with proper isolation
+            results = await self.graph_client.search(
+                "conversations",
+                group_ids=[user_id] if user_id else None  # Filter by user's group_id
+            )
             
             # Sort by recency
             user_memories = sorted(
