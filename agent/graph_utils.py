@@ -178,7 +178,8 @@ class GraphitiClient:
         metadata: Optional[Dict[str, Any]] = None,
         entity_types: Optional[Dict[str, Any]] = None,
         edge_types: Optional[Dict[str, Any]] = None,
-        edge_type_map: Optional[Dict[tuple, List[str]]] = None
+        edge_type_map: Optional[Dict[tuple, List[str]]] = None,
+        user_id: Optional[str] = None
     ):
         """
         Add an episode to the knowledge graph with optional custom entity types.
@@ -210,6 +211,10 @@ class GraphitiClient:
             "reference_time": episode_timestamp
         }
         
+        # Add user_id as group_id for user isolation
+        if user_id:
+            episode_kwargs["group_id"] = user_id
+        
         # Add custom entity types if provided
         if entity_types:
             episode_kwargs["entity_types"] = entity_types
@@ -222,13 +227,14 @@ class GraphitiClient:
         
         await self.graphiti.add_episode(**episode_kwargs)
         
-        logger.info(f"Added episode {episode_id} to knowledge graph with custom entities: {bool(entity_types)}")
+        logger.info(f"Added episode {episode_id} to knowledge graph with custom entities: {bool(entity_types)} for user: {user_id}")
     
     async def search(
         self,
         query: str,
         center_node_distance: int = 2,
-        use_hybrid_search: bool = True
+        use_hybrid_search: bool = True,
+        user_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Search the knowledge graph.
@@ -245,8 +251,15 @@ class GraphitiClient:
             await self.initialize()
         
         try:
-            # Use Graphiti's search method (simplified parameters)
-            results = await self.graphiti.search(query)
+            # Prepare search kwargs
+            search_kwargs = {"query": query}
+            
+            # Add user_id as group_id for filtering if provided
+            if user_id:
+                search_kwargs["group_ids"] = [user_id]
+            
+            # Use Graphiti's search method
+            results = await self.graphiti.search(**search_kwargs)
             
             # Convert results to dictionaries
             return [
@@ -542,7 +555,8 @@ class GraphitiClient:
     async def add_fact_triples(
         self,
         triples: List[Tuple[str, str, str]],
-        episode_id: Optional[str] = None
+        episode_id: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Add fact triples to the knowledge graph.
@@ -576,26 +590,28 @@ class GraphitiClient:
                 import uuid
                 
                 # Create nodes for subject and object
+                # Use user_id for group_id to ensure user isolation
                 subject_node = EntityNode(
                     uuid=str(uuid.uuid4()),
                     name=str(subject),
-                    group_id=episode_id or ""
+                    group_id=user_id or ""  # Use user_id for isolation, not episode_id
                 )
                 
                 object_node = EntityNode(
                     uuid=str(uuid.uuid4()),
                     name=str(obj),
-                    group_id=episode_id or ""
+                    group_id=user_id or ""  # Use user_id for isolation, not episode_id
                 )
                 
                 # Create edge for the relationship
                 edge = EntityEdge(
-                    group_id=episode_id or "",
+                    group_id=user_id or "",  # Use user_id for isolation
                     source_node_uuid=subject_node.uuid,
                     target_node_uuid=object_node.uuid,
                     created_at=datetime.now(timezone.utc),
                     name=str(predicate),
-                    fact=f"{subject} {predicate} {obj}"
+                    fact=f"{subject} {predicate} {obj}",
+                    episode_id=episode_id  # Store episode_id as metadata if needed
                 )
                 
                 # Add triplet to graph (Graphiti will handle deduplication)
@@ -618,6 +634,69 @@ class GraphitiClient:
                 })
         
         return results
+    
+    async def register_user(self, user_id: str) -> bool:
+        """
+        Register a user in the knowledge graph.
+        
+        Args:
+            user_id: Unique user identifier (Supabase UUID)
+        
+        Returns:
+            True if registration successful
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        try:
+            # Create a user registration episode to initialize the user's namespace
+            episode_id = f"user_registration_{user_id}"
+            content = f"User {user_id} registered in knowledge graph"
+            source = "user_registration"
+            
+            await self.add_episode(
+                episode_id=episode_id,
+                content=content,
+                source=source,
+                timestamp=datetime.now(timezone.utc),
+                metadata={"registration": True, "user_id": user_id},
+                user_id=user_id  # This creates the user's namespace
+            )
+            
+            logger.info(f"Registered user {user_id} in knowledge graph")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to register user {user_id}: {e}")
+            return False
+    
+    async def ensure_user_exists(self, user_id: str) -> bool:
+        """
+        Ensure a user exists in the knowledge graph (idempotent).
+        
+        Args:
+            user_id: Unique user identifier
+        
+        Returns:
+            True if user exists or was successfully created
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        try:
+            # Check if user has any episodes
+            results = await self.search("user registration", user_id=user_id)
+            
+            if results:
+                logger.debug(f"User {user_id} already exists in knowledge graph")
+                return True
+            
+            # Register the user
+            return await self.register_user(user_id)
+            
+        except Exception as e:
+            logger.error(f"Failed to ensure user exists {user_id}: {e}")
+            return False
     
     async def clear_graph(self):
         """Clear all data from the graph (USE WITH CAUTION)."""

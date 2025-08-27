@@ -463,6 +463,53 @@ async def root():
     }
 
 
+@app.post("/api/users/register-neo4j")
+async def register_neo4j_user(request: Request):
+    """
+    Register a user in Neo4j/Graphiti knowledge graph.
+    This endpoint is designed to be called by Supabase Edge Functions.
+    
+    Expected payload:
+    {
+        "user_id": "uuid-string"
+    }
+    """
+    try:
+        # Parse request body
+        data = await request.json()
+        user_id = data.get("user_id")
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id is required")
+        
+        # Import graph_client
+        from .graph_utils import graph_client
+        
+        # Register user in Neo4j (idempotent operation)
+        success = await graph_client.ensure_user_exists(user_id)
+        
+        if success:
+            logger.info(f"Successfully registered user {user_id} in Neo4j")
+            return {
+                "status": "success",
+                "user_id": user_id,
+                "message": "User registered in knowledge graph"
+            }
+        else:
+            logger.error(f"Failed to register user {user_id} in Neo4j")
+            return {
+                "status": "error",
+                "user_id": user_id,
+                "message": "Failed to register user in knowledge graph"
+            }
+            
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    except Exception as e:
+        logger.error(f"Error registering user in Neo4j: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/health", response_model=HealthStatus)
 async def health_check_endpoint():
     """Health check endpoint."""

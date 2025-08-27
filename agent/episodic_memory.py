@@ -109,10 +109,13 @@ class EpisodicMemoryService:
         # Source description for the episode
         source_description = f"User conversation in session {session_id}"
         
+        # Extract user_id from metadata for proper isolation
+        user_id = metadata.get("user_id") if metadata else None
+        
         # Enhanced metadata with medical information
         enhanced_metadata = {
             "session_id": session_id,
-            "user_id": metadata.get("user_id") if metadata else None,
+            "user_id": user_id,
             "conversation_turn": True,
             "tools_used": [tool.get("tool_name") for tool in (tools_used or [])],
             "medical_entities": entities,
@@ -132,7 +135,7 @@ class EpisodicMemoryService:
                 edge_types = get_medical_edge_types()
                 edge_type_map = get_medical_edge_type_map()
             
-            # Add episode with custom entity types
+            # Add episode with custom entity types and user_id for isolation
             await self.graph_client.add_episode(
                 episode_id=episode_id,
                 content=episode_content,
@@ -141,13 +144,18 @@ class EpisodicMemoryService:
                 metadata=enhanced_metadata,
                 entity_types=entity_types,
                 edge_types=edge_types,
-                edge_type_map=edge_type_map
+                edge_type_map=edge_type_map,
+                user_id=user_id  # Pass user_id for proper isolation
             )
             
-            # Store fact triples in knowledge graph
+            # Store fact triples in knowledge graph with user_id
             if facts:
                 try:
-                    results = await self.graph_client.add_fact_triples(facts, episode_id)
+                    results = await self.graph_client.add_fact_triples(
+                        facts, 
+                        episode_id=episode_id,
+                        user_id=user_id  # Pass user_id for proper isolation
+                    )
                     success_count = sum(1 for r in results if r["status"] == "success")
                     logger.info(f"Added {success_count}/{len(facts)} fact triples to knowledge graph")
                     
@@ -379,11 +387,13 @@ class EpisodicMemoryService:
         search_query = query
         if session_id:
             search_query = f"{query} session:{session_id}"
-        elif user_id:
-            search_query = f"{query} user:{user_id}"
         
         try:
-            results = await self.graph_client.search(search_query)
+            # Pass user_id for filtering if provided
+            results = await self.graph_client.search(
+                search_query,
+                user_id=user_id  # Filter by user_id for proper isolation
+            )
             
             # Filter to conversation episodes
             conversation_results = [
@@ -432,8 +442,11 @@ class EpisodicMemoryService:
             return []
             
         try:
-            # Search for user-specific memories
-            results = await self.graph_client.search(f"user {user_id} conversations")
+            # Search for user-specific memories with proper isolation
+            results = await self.graph_client.search(
+                "conversations",
+                user_id=user_id  # Filter by user_id for proper isolation
+            )
             
             # Sort by recency
             user_memories = sorted(
