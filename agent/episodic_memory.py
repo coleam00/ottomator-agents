@@ -109,10 +109,13 @@ class EpisodicMemoryService:
         # Source description for the episode
         source_description = f"User conversation in session {session_id}"
         
+        # Extract user_id from metadata for group_id partitioning
+        user_id = metadata.get("user_id") if metadata else None
+        
         # Enhanced metadata with medical information
         enhanced_metadata = {
             "session_id": session_id,
-            "user_id": metadata.get("user_id") if metadata else None,
+            "user_id": user_id,
             "conversation_turn": True,
             "tools_used": [tool.get("tool_name") for tool in (tools_used or [])],
             "medical_entities": entities,
@@ -132,7 +135,7 @@ class EpisodicMemoryService:
                 edge_types = get_medical_edge_types()
                 edge_type_map = get_medical_edge_type_map()
             
-            # Add episode with custom entity types
+            # Add episode with custom entity types and user's group_id for isolation
             await self.graph_client.add_episode(
                 episode_id=episode_id,
                 content=episode_content,
@@ -141,7 +144,8 @@ class EpisodicMemoryService:
                 metadata=enhanced_metadata,
                 entity_types=entity_types,
                 edge_types=edge_types,
-                edge_type_map=edge_type_map
+                edge_type_map=edge_type_map,
+                group_id=user_id  # Use user_id as group_id for user isolation
             )
             
             # Store fact triples in knowledge graph
@@ -266,6 +270,9 @@ class EpisodicMemoryService:
         """Track symptom progression over time."""
         timeline_id = f"symptom_timeline_{session_id}_{uuid4().hex[:8]}"
         
+        # Extract user_id from metadata for proper isolation
+        user_id = metadata.get("user_id") if metadata else None
+        
         content = f"Symptom Timeline Entry: {symptom}"
         if severity:
             content += f" - Severity: {severity}"
@@ -278,11 +285,13 @@ class EpisodicMemoryService:
                 timestamp=timestamp,
                 metadata={
                     "session_id": session_id,
+                    "user_id": user_id,
                     "symptom": symptom,
                     "severity": severity,
                     "timeline_entry": True,
                     **(metadata or {})
-                }
+                },
+                group_id=user_id  # Use user_id as group_id for isolation
             )
             
             logger.info(f"Created symptom timeline entry: {timeline_id}")
@@ -379,11 +388,11 @@ class EpisodicMemoryService:
         search_query = query
         if session_id:
             search_query = f"{query} session:{session_id}"
-        elif user_id:
-            search_query = f"{query} user:{user_id}"
         
         try:
-            results = await self.graph_client.search(search_query)
+            # Search with user's group_id if provided to ensure isolation
+            group_ids = [user_id] if user_id else None
+            results = await self.graph_client.search(search_query, group_ids=group_ids)
             
             # Filter to conversation episodes
             conversation_results = [

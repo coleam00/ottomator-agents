@@ -56,7 +56,8 @@ class GraphBuilder:
         document_title: str,
         document_source: str,
         document_metadata: Optional[Dict[str, Any]] = None,
-        batch_size: int = 3  # Reduced batch size for Graphiti
+        batch_size: int = 3,  # Reduced batch size for Graphiti
+        group_id: str = "0"  # Default to shared knowledge base
     ) -> Dict[str, Any]:
         """
         Add document chunks to the knowledge graph.
@@ -67,6 +68,7 @@ class GraphBuilder:
             document_source: Source of the document
             document_metadata: Additional metadata
             batch_size: Number of chunks to process in each batch
+            group_id: Graph partition ID ("0" for shared knowledge base)
         
         Returns:
             Processing results
@@ -104,7 +106,7 @@ class GraphBuilder:
                 # Create source description (shorter)
                 source_description = f"Document: {document_title} (Chunk: {chunk.index})"
                 
-                # Add episode to graph
+                # Add episode to graph with group_id for shared knowledge
                 await self.graph_client.add_episode(
                     episode_id=episode_id,
                     content=episode_content,
@@ -115,8 +117,10 @@ class GraphBuilder:
                         "document_source": document_source,
                         "chunk_index": chunk.index,
                         "original_length": len(chunk.content),
-                        "processed_length": len(episode_content)
-                    }
+                        "processed_length": len(episode_content),
+                        "knowledge_type": "shared"
+                    },
+                    group_id=group_id  # Pass group_id for proper partitioning
                 )
                 
                 episodes_created += 1

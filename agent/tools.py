@@ -179,19 +179,21 @@ async def vector_search_tool(input_data: VectorSearchInput) -> List[ChunkResult]
         return []
 
 
-async def graph_search_tool(input_data: GraphSearchInput) -> List[GraphSearchResult]:
+async def graph_search_tool(input_data: GraphSearchInput, group_ids: Optional[List[str]] = None) -> List[GraphSearchResult]:
     """
     Search the knowledge graph.
     
     Args:
         input_data: Search parameters
+        group_ids: Optional list of group IDs to filter (e.g., ["0"] for shared, [user_id] for personal)
     
     Returns:
         List of graph search results
     """
     try:
         results = await search_knowledge_graph(
-            query=input_data.query
+            query=input_data.query,
+            group_ids=group_ids
         )
         
         # Convert to GraphSearchResult models
@@ -445,7 +447,8 @@ async def perform_comprehensive_search(
         tasks.append(vector_search_tool(VectorSearchInput(query=query, limit=limit)))
     
     if use_graph:
-        tasks.append(graph_search_tool(GraphSearchInput(query=query)))
+        # Search shared knowledge base (group_id="0")
+        tasks.append(graph_search_tool(GraphSearchInput(query=query), group_ids=["0"]))
     
     if tasks:
         search_results = await asyncio.gather(*tasks, return_exceptions=True)

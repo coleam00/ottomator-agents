@@ -113,6 +113,7 @@ async def graph_search(
     This tool queries the knowledge graph to find specific facts, relationships 
     between entities, and temporal information. Best for finding specific facts,
     relationships between companies/people/technologies, and time-based information.
+    Searches the shared knowledge base (group_id="0") by default.
     
     Args:
         query: Search query to find facts and relationships
@@ -122,7 +123,8 @@ async def graph_search(
     """
     input_data = GraphSearchInput(query=query)
     
-    results = await graph_search_tool(input_data)
+    # Search shared knowledge base (group_id="0")
+    results = await graph_search_tool(input_data, group_ids=["0"])
     
     # Convert results to dict for agent
     return [

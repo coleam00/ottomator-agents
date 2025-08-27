@@ -173,7 +173,8 @@ class GraphitiClient:
         metadata: Optional[Dict[str, Any]] = None,
         entity_types: Optional[Dict[str, Any]] = None,
         edge_types: Optional[Dict[str, Any]] = None,
-        edge_type_map: Optional[Dict[tuple, List[str]]] = None
+        edge_type_map: Optional[Dict[tuple, List[str]]] = None,
+        group_id: Optional[str] = None
     ):
         """
         Add an episode to the knowledge graph with optional custom entity types.
@@ -187,6 +188,7 @@ class GraphitiClient:
             entity_types: Custom entity types for extraction
             edge_types: Custom edge types for relationships
             edge_type_map: Mapping of entity pairs to edge types
+            group_id: Graph partition ID for user isolation (None for default, "0" for shared, user UUID for personal)
         """
         if not self._initialized:
             await self.initialize()
@@ -204,6 +206,10 @@ class GraphitiClient:
             "source_description": source,
             "reference_time": episode_timestamp
         }
+        
+        # Add group_id for graph partitioning if provided
+        if group_id is not None:
+            episode_kwargs["group_id"] = group_id
         
         # Add custom entity types if provided
         if entity_types:
@@ -223,7 +229,8 @@ class GraphitiClient:
         self,
         query: str,
         center_node_distance: int = 2,
-        use_hybrid_search: bool = True
+        use_hybrid_search: bool = True,
+        group_ids: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
         Search the knowledge graph.
@@ -232,6 +239,7 @@ class GraphitiClient:
             query: Search query
             center_node_distance: Distance from center nodes
             use_hybrid_search: Whether to use hybrid search
+            group_ids: List of group IDs to filter results (e.g., ["0"] for shared, [user_id] for personal)
         
         Returns:
             Search results
@@ -240,8 +248,15 @@ class GraphitiClient:
             await self.initialize()
         
         try:
-            # Use Graphiti's search method (simplified parameters)
-            results = await self.graphiti.search(query)
+            # Build search kwargs
+            search_kwargs = {"query": query}
+            
+            # Add group_ids filter if provided
+            if group_ids is not None:
+                search_kwargs["group_ids"] = group_ids
+            
+            # Use Graphiti's search method with optional group filtering
+            results = await self.graphiti.search(**search_kwargs)
             
             # Convert results to dictionaries
             return [
@@ -570,22 +585,25 @@ class GraphitiClient:
                 from graphiti_core.edges import EntityEdge
                 import uuid
                 
+                # Use group_id="0" for shared facts, or the episode_id if it's user-specific
+                fact_group_id = "0" if not episode_id or episode_id.startswith("knowledge_") else episode_id
+                
                 # Create nodes for subject and object
                 subject_node = EntityNode(
                     uuid=str(uuid.uuid4()),
                     name=str(subject),
-                    group_id=episode_id or ""
+                    group_id=fact_group_id
                 )
                 
                 object_node = EntityNode(
                     uuid=str(uuid.uuid4()),
                     name=str(obj),
-                    group_id=episode_id or ""
+                    group_id=fact_group_id
                 )
                 
                 # Create edge for the relationship
                 edge = EntityEdge(
-                    group_id=episode_id or "",
+                    group_id=fact_group_id,
                     source_node_uuid=subject_node.uuid,
                     target_node_uuid=object_node.uuid,
                     created_at=datetime.now(timezone.utc),
@@ -655,7 +673,8 @@ async def add_to_knowledge_graph(
     content: str,
     source: str,
     episode_id: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    group_id: Optional[str] = None
 ) -> str:
     """
     Add content to the knowledge graph.
@@ -665,6 +684,7 @@ async def add_to_knowledge_graph(
         source: Source of the content
         episode_id: Optional episode ID
         metadata: Optional metadata
+        group_id: Optional group ID for partitioning
     
     Returns:
         Episode ID
@@ -676,25 +696,28 @@ async def add_to_knowledge_graph(
         episode_id=episode_id,
         content=content,
         source=source,
-        metadata=metadata
+        metadata=metadata,
+        group_id=group_id
     )
     
     return episode_id
 
 
 async def search_knowledge_graph(
-    query: str
+    query: str,
+    group_ids: Optional[List[str]] = None
 ) -> List[Dict[str, Any]]:
     """
     Search the knowledge graph.
     
     Args:
         query: Search query
+        group_ids: Optional list of group IDs to filter by
     
     Returns:
         Search results
     """
-    return await graph_client.search(query)
+    return await graph_client.search(query, group_ids=group_ids)
 
 
 async def get_entity_relationships(
