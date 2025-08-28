@@ -1,0 +1,34 @@
+{
+  "episode_id": "conversation_0e2582b0-092e-485b-8053-7d9a7e222062_b771a71b",
+  "content": "User Query: My mood swings have been really difficult lately\n\nAssistant Response: I hear that mood swings are challenging for you. Let's explore strategies to help manage them.\n\nTools Used: graph_search",
+  "source": "User conversation in session 0e2582b0-092e-485b-8053-7d9a7e222062",
+  "timestamp": "2025-08-27T23:06:20.176862+00:00",
+  "metadata": {
+    "session_id": "0e2582b0-092e-485b-8053-7d9a7e222062",
+    "user_id": "ea79ce00-328e-49d0-916d-15ff15c761d0",
+    "conversation_turn": true,
+    "tools_used": [
+      "graph_search"
+    ],
+    "medical_entities": {
+      "user_entities": {
+        "symptoms": [],
+        "conditions": [],
+        "treatments": [],
+        "body_parts": []
+      },
+      "assistant_entities": {
+        "symptoms": [],
+        "conditions": [],
+        "treatments": [],
+        "body_parts": [
+          "ear"
+        ]
+      }
+    },
+    "fact_triples": [],
+    "importance_score": 0.5
+  },
+  "error": "",
+  "failed_at": "2025-08-27T23:06:31.777295+00:00"
+}

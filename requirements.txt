@@ -93,3 +93,4 @@ backoff==2.2.1
 posthog==6.6.1
 supabase==2.18.1
 gunicorn==23.0.0
+tenacity==9.0.0

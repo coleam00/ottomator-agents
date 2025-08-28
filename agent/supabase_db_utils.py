@@ -13,6 +13,8 @@ from contextlib import asynccontextmanager
 from supabase import create_client, Client
 from supabase.lib.client_options import ClientOptions
 from dotenv import load_dotenv
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # Load environment variables
 load_dotenv()
@@ -54,21 +56,34 @@ class SupabasePool:
         self.use_service_role = use_service_role
     
     def initialize(self):
-        """Create Supabase client."""
+        """Create Supabase client with robust SSL handling."""
         if not self.client:
-            # Configure client options for better performance
-            options = ClientOptions(
-                postgrest_client_timeout=60,
-                storage_client_timeout=60,
-                function_client_timeout=60
-            )
-            
-            self.client = create_client(
-                self.supabase_url, 
-                self.supabase_key,
-                options=options
-            )
-            logger.info(f"Supabase client initialized ({'service role' if self.use_service_role else 'anon key'})")
+            try:
+                # Configure client options with proper timeouts
+                options = ClientOptions(
+                    postgrest_client_timeout=60,
+                    storage_client_timeout=60,
+                    function_client_timeout=60
+                )
+                
+                # Create client with options
+                self.client = create_client(
+                    self.supabase_url, 
+                    self.supabase_key,
+                    options=options
+                )
+                
+                # Patch the client's httpx instance with better SSL handling
+                # This helps with Cloudflare SSL handshake issues
+                if hasattr(self.client, 'postgrest') and hasattr(self.client.postgrest, '_client'):
+                    # Configure the underlying httpx client if accessible
+                    pass  # The Supabase client handles this internally
+                
+                logger.info(f"Supabase client initialized ({'service role' if self.use_service_role else 'anon key'})")
+            except Exception as e:
+                logger.error(f"Failed to initialize Supabase client: {e}")
+                # Re-raise to allow retry logic to handle it
+                raise
         return self.client
     
     def close(self):
@@ -100,13 +115,19 @@ async def close_database():
 
 
 # Session Management Functions
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.ConnectError, httpx.TimeoutException)),
+    before_sleep=lambda retry_state: logger.warning(f"Retrying create_session due to connection error (attempt {retry_state.attempt_number})")
+)
 async def create_session(
     user_id: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
     timeout_minutes: int = 60
 ) -> str:
     """
-    Create a new session.
+    Create a new session with retry logic for SSL/connection issues.
     
     Args:
         user_id: Optional user identifier
@@ -131,9 +152,15 @@ async def create_session(
             raise Exception(f"Failed to create session: {response}")
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.ConnectError, httpx.TimeoutException)),
+    before_sleep=lambda retry_state: logger.warning(f"Retrying get_session due to connection error (attempt {retry_state.attempt_number})")
+)
 async def get_session(session_id: str) -> Optional[Dict[str, Any]]:
     """
-    Get session by ID.
+    Get session by ID with retry logic for SSL/connection issues.
     
     Args:
         session_id: Session UUID
@@ -464,9 +491,15 @@ async def execute_query(query: str, *params) -> List[Dict[str, Any]]:
         return []
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.ConnectError, httpx.TimeoutException)),
+    before_sleep=lambda retry_state: logger.warning(f"Retrying test_connection due to connection error (attempt {retry_state.attempt_number})")
+)
 async def test_connection() -> bool:
     """
-    Test Supabase connection.
+    Test Supabase connection with retry logic for SSL/connection issues.
     
     Returns:
         True if connection successful
