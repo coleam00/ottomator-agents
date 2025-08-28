@@ -566,6 +566,7 @@ class GraphitiClient:
         Args:
             triples: List of (subject, predicate, object) tuples
             episode_id: Optional episode ID to associate with facts
+            user_id: Optional user ID for user-specific facts (uses this as group_id)
         
         Returns:
             List of results for each triple (success/error status)
@@ -614,8 +615,7 @@ class GraphitiClient:
                     target_node_uuid=object_node.uuid,
                     created_at=datetime.now(timezone.utc),
                     name=str(predicate),
-                    fact=f"{subject} {predicate} {obj}",
-                    episode_id=episode_id  # Store episode_id as metadata if needed
+                    fact=f"{subject} {predicate} {obj}"
                 )
                 
                 # Add triplet to graph (Graphiti will handle deduplication)
