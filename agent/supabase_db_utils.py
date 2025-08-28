@@ -118,8 +118,8 @@ async def close_database():
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.ConnectError, httpx.TimeoutException)),
-    before_sleep=lambda retry_state: logger.warning(f"Retrying create_session due to connection error (attempt {retry_state.attempt_number})")
+    retry=retry_if_exception_type(Exception),  # Catch all exceptions including Supabase errors
+    before_sleep=lambda retry_state: logger.warning(f"Retrying create_session due to error (attempt {retry_state.attempt_number})")
 )
 async def create_session(
     user_id: Optional[str] = None,
@@ -140,23 +140,31 @@ async def create_session(
     async with supabase_pool.acquire() as client:
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=timeout_minutes)
         
-        response = client.table("sessions").insert({
-            "user_id": user_id,
-            "metadata": metadata or {},
-            "expires_at": expires_at.isoformat()
-        }).execute()
-        
-        if response.data:
-            return response.data[0]["id"]
-        else:
-            raise Exception(f"Failed to create session: {response}")
+        try:
+            response = client.table("sessions").insert({
+                "user_id": user_id,
+                "metadata": metadata or {},
+                "expires_at": expires_at.isoformat()
+            }).execute()
+            
+            if response.data:
+                return response.data[0]["id"]
+            else:
+                raise Exception(f"Failed to create session: {response}")
+        except Exception as e:
+            error_str = str(e)
+            if any(code in error_str for code in ['525', '520', 'SSL', 'handshake']):
+                logger.warning(f"SSL/Connection error in create_session, will retry: {e}")
+                raise  # Re-raise to trigger retry
+            else:
+                raise  # Re-raise other errors
 
 
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.ConnectError, httpx.TimeoutException)),
-    before_sleep=lambda retry_state: logger.warning(f"Retrying get_session due to connection error (attempt {retry_state.attempt_number})")
+    retry=retry_if_exception_type(Exception),  # Catch all exceptions including Supabase errors
+    before_sleep=lambda retry_state: logger.warning(f"Retrying get_session due to error (attempt {retry_state.attempt_number})")
 )
 async def get_session(session_id: str) -> Optional[Dict[str, Any]]:
     """
@@ -494,8 +502,8 @@ async def execute_query(query: str, *params) -> List[Dict[str, Any]]:
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.ConnectError, httpx.TimeoutException)),
-    before_sleep=lambda retry_state: logger.warning(f"Retrying test_connection due to connection error (attempt {retry_state.attempt_number})")
+    retry=retry_if_exception_type(Exception),  # Catch all exceptions including Supabase errors
+    before_sleep=lambda retry_state: logger.warning(f"Retrying test_connection due to error (attempt {retry_state.attempt_number})")
 )
 async def test_connection() -> bool:
     """
@@ -510,8 +518,14 @@ async def test_connection() -> bool:
             response = client.table("documents").select("id").limit(1).execute()
             return True
     except Exception as e:
-        logger.error(f"Supabase connection test failed: {e}")
-        return False
+        # Check if it's an SSL/connection error that should be retried
+        error_str = str(e)
+        if any(code in error_str for code in ['525', '520', 'SSL', 'handshake']):
+            logger.warning(f"SSL/Connection error, will retry: {e}")
+            raise  # Re-raise to trigger retry
+        else:
+            logger.error(f"Supabase connection test failed: {e}")
+            return False
 
 
 # Additional helper functions specific to Supabase
