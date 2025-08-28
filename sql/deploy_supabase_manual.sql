@@ -501,8 +501,8 @@ INSERT INTO documents (title, source, content, metadata) VALUES
 (
     'Medical RAG Database Setup Test',
     'system',
-    'This is a test document to verify that the Medical RAG database schema has been set up correctly in Supabase. It includes vector search capabilities, full-text search, and session management. The system supports Gemini embeddings with 3072 dimensions and provides comprehensive medical document analysis capabilities.',
-    '{"type": "test", "version": "1.0", "setup_date": "2025-01-22", "embedding_model": "gemini-embedding-001", "dimensions": 3072}'
+    'This is a test document to verify that the Medical RAG database schema has been set up correctly in Supabase. It includes vector search capabilities, full-text search, and session management. The system supports normalized embeddings with 1536 dimensions (Supabase IVFFlat limit) and provides comprehensive medical document analysis capabilities.',
+    '{"type": "test", "version": "1.0", "setup_date": "2025-01-22", "embedding_model": "normalized", "dimensions": 1536}'
 );
 
 -- =====================================================

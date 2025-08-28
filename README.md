@@ -53,7 +53,11 @@ pip install -r requirements.txt
 
 Execute the SQL in `sql/schema.sql` to create all necessary tables, indexes, and functions.
 
-Be sure to change the embedding dimensions on lines 31, 67, and 100 based on your embedding model. Gemini's gemini-embedding-001 is 3072 dimensions, OpenAI's text-embedding-3-small is 1536 and nomic-embed-text from Ollama is 768 dimensions, for reference.
+The database schema is standardized to use 1536-dimensional vectors (Supabase IVFFlat limit). All embeddings from various models are automatically normalized to this dimension:
+- Gemini gemini-embedding-001 (native 768/3072 → normalized to 1536)
+- OpenAI text-embedding-3-small (native 1536)
+- OpenAI text-embedding-3-large (native 3072 → normalized to 1536)
+- Ollama nomic-embed-text (native 768 → normalized to 1536)
 
 Note that this script will drop all tables before creating/recreating!
 

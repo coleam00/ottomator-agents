@@ -1,8 +1,9 @@
 """
 Embedding truncator for compatibility with database dimension limits.
 
-This module handles truncation of high-dimensional embeddings (like Gemini's 3072)
-to fit within database constraints (like Supabase's 1536 limit for IVFFlat).
+This module handles normalization of embeddings to a standardized dimension.
+All embeddings are normalized to 1536 dimensions (Supabase's IVFFlat limit),
+regardless of the source model's native dimensions (e.g., Gemini's 768/3072).
 """
 
 import logging

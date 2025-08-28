@@ -47,7 +47,7 @@ python sql/deploy_to_supabase.py --verify-only
 
 2. **`chunks`** - Document chunks with vector embeddings
    - Foreign key: `document_id` → `documents(id)`
-   - Vector field: `embedding` (3072 dimensions for Gemini)
+   - Vector field: `embedding` (1536 dimensions - Supabase IVFFlat limit)
    - IVFFlat index for fast vector search
 
 3. **`sessions`** - User session management
@@ -83,26 +83,29 @@ DB_PASSWORD="[your-password]"
 DB_NAME="postgres"
 
 # Application settings
-VECTOR_DIMENSION=3072  # Gemini gemini-embedding-001
+VECTOR_DIMENSION=1536  # Supabase IVFFlat limit (normalized from various models)
 CHUNK_SIZE=800
 CHUNK_OVERLAP=150
 ```
 
 ### Embedding Model Compatibility
 
-The schema is configured for **3072-dimensional vectors** (Gemini gemini-embedding-001).
+The schema is configured for **1536-dimensional vectors** (Supabase IVFFlat limit).
 
-**To change dimensions:**
+**Note on dimensions:**
 
-1. Update `vector(3072)` to your dimension in:
-   - Line 31: `chunks.embedding`
-   - Line 67: `match_chunks` function parameter
-   - Line 100: `hybrid_search` function parameter
+1. The schema uses `vector(1536)` as the standard in:
+   - `chunks.embedding` field
+   - `match_chunks` function parameter
+   - `hybrid_search` function parameter
 
-2. Common dimensions:
-   - OpenAI text-embedding-3-small: **1536**
-   - OpenAI text-embedding-3-large: **3072**
-   - Ollama nomic-embed-text: **768**
+2. Why 1536 dimensions:
+   - **Supabase IVFFlat limit**: 1536 is the recommended max for performance
+   - **Compatibility**: Works with all models via truncation/padding
+   - Models automatically normalized to 1536:
+     - Gemini (768/3072 → 1536)
+     - OpenAI text-embedding-3-small (native 1536)
+     - OpenAI text-embedding-3-large (3072 → 1536)
 
 ## 🛡️ Security Features
 
@@ -154,7 +157,7 @@ WHERE routine_name IN ('match_chunks', 'hybrid_search', 'get_document_chunks');
 ```sql
 -- Test vector functionality
 WITH test_vector AS (
-    SELECT array_fill(0.1, ARRAY[3072])::vector as test_embedding
+    SELECT array_fill(0.1, ARRAY[1536])::vector as test_embedding
 )
 SELECT array_length(test_embedding::float[], 1) as dimensions
 FROM test_vector;
@@ -232,7 +235,7 @@ INSERT INTO chunks (document_id, content, embedding, chunk_index, token_count)
 SELECT 
     id as document_id,
     'Test medical content for vector search',
-    array_fill(random(), ARRAY[3072])::vector,
+    array_fill(random(), ARRAY[1536])::vector,
     0,
     10
 FROM documents WHERE source = 'test' LIMIT 1;

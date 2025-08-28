@@ -58,9 +58,9 @@ def _get_vector_dimension() -> int:
     Safely parse VECTOR_DIMENSION environment variable with robust error handling.
     
     Returns:
-        int: The vector dimension, defaulting to 3072 (Gemini gemini-embedding-001)
+        int: The vector dimension, defaulting to 1536 (Supabase IVFFlat limit)
     """
-    return _safe_parse_int("VECTOR_DIMENSION", 3072, min_value=1, max_value=10000)
+    return _safe_parse_int("VECTOR_DIMENSION", 1536, min_value=1, max_value=10000)
 
 
 class MessageRole(str, Enum):

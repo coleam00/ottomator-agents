@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS episodes (
     entities JSONB DEFAULT '[]', -- Extracted entities
     relationships JSONB DEFAULT '[]', -- Extracted relationships
     
-    -- Vector embedding for episode content (3072 dimensions for Gemini)
-    embedding vector(3072),
+    -- Vector embedding for episode content (1536 dimensions for Supabase limit)
+    embedding vector(1536),
     
     -- Episode scoring and importance
     importance_score FLOAT DEFAULT 0.5 CHECK (importance_score >= 0 AND importance_score <= 1),
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS memory_summaries (
     key_insights JSONB DEFAULT '[]',
     
     -- Vector embedding for summary
-    embedding vector(3072),
+    embedding vector(1536),
     
     -- Metadata
     metadata JSONB DEFAULT '{}',
