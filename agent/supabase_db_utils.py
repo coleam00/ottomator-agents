@@ -14,12 +14,18 @@ from supabase import create_client, Client
 from supabase.lib.client_options import ClientOptions
 from dotenv import load_dotenv
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 # Load environment variables
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+
+def is_ssl_connection_error(exception):
+    """Check if an exception is an SSL/connection error that should be retried."""
+    error_str = str(exception)
+    return any(indicator in error_str for indicator in ['525', '520', 'SSL', 'handshake', 'certificate'])
 
 
 class SupabasePool:
@@ -118,8 +124,8 @@ async def close_database():
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type(Exception),  # Catch all exceptions including Supabase errors
-    before_sleep=lambda retry_state: logger.warning(f"Retrying create_session due to error (attempt {retry_state.attempt_number})")
+    retry=retry_if_exception(is_ssl_connection_error),  # Only retry SSL/connection errors
+    before_sleep=lambda retry_state: logger.warning(f"Retrying create_session due to SSL/connection error (attempt {retry_state.attempt_number})")
 )
 async def create_session(
     user_id: Optional[str] = None,
@@ -140,31 +146,23 @@ async def create_session(
     async with supabase_pool.acquire() as client:
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=timeout_minutes)
         
-        try:
-            response = client.table("sessions").insert({
-                "user_id": user_id,
-                "metadata": metadata or {},
-                "expires_at": expires_at.isoformat()
-            }).execute()
-            
-            if response.data:
-                return response.data[0]["id"]
-            else:
-                raise Exception(f"Failed to create session: {response}")
-        except Exception as e:
-            error_str = str(e)
-            if any(code in error_str for code in ['525', '520', 'SSL', 'handshake']):
-                logger.warning(f"SSL/Connection error in create_session, will retry: {e}")
-                raise  # Re-raise to trigger retry
-            else:
-                raise  # Re-raise other errors
+        response = client.table("sessions").insert({
+            "user_id": user_id,
+            "metadata": metadata or {},
+            "expires_at": expires_at.isoformat()
+        }).execute()
+        
+        if response.data:
+            return response.data[0]["id"]
+        else:
+            raise Exception(f"Failed to create session: {response}")
 
 
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type(Exception),  # Catch all exceptions including Supabase errors
-    before_sleep=lambda retry_state: logger.warning(f"Retrying get_session due to error (attempt {retry_state.attempt_number})")
+    retry=retry_if_exception(is_ssl_connection_error),  # Only retry SSL/connection errors
+    before_sleep=lambda retry_state: logger.warning(f"Retrying get_session due to SSL/connection error (attempt {retry_state.attempt_number})")
 )
 async def get_session(session_id: str) -> Optional[Dict[str, Any]]:
     """
@@ -502,8 +500,8 @@ async def execute_query(query: str, *params) -> List[Dict[str, Any]]:
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type(Exception),  # Catch all exceptions including Supabase errors
-    before_sleep=lambda retry_state: logger.warning(f"Retrying test_connection due to error (attempt {retry_state.attempt_number})")
+    retry=retry_if_exception(is_ssl_connection_error),  # Only retry SSL/connection errors
+    before_sleep=lambda retry_state: logger.warning(f"Retrying test_connection due to SSL/connection error (attempt {retry_state.attempt_number})")
 )
 async def test_connection() -> bool:
     """
@@ -518,14 +516,9 @@ async def test_connection() -> bool:
             response = client.table("documents").select("id").limit(1).execute()
             return True
     except Exception as e:
-        # Check if it's an SSL/connection error that should be retried
-        error_str = str(e)
-        if any(code in error_str for code in ['525', '520', 'SSL', 'handshake']):
-            logger.warning(f"SSL/Connection error, will retry: {e}")
-            raise  # Re-raise to trigger retry
-        else:
-            logger.error(f"Supabase connection test failed: {e}")
-            return False
+        logger.error(f"Supabase connection test failed: {e}")
+        # Re-raise to let retry decorator handle it if it's an SSL error
+        raise
 
 
 # Additional helper functions specific to Supabase
