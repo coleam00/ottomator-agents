@@ -188,9 +188,9 @@ test-results/
 test-reports/
 
 # Test files with potential credentials
-tests/
-test_*.py
-*_test.py
+# tests/  # Commented out - tests folder should be tracked
+# test_*.py  # Commented out - test files should be tracked
+# *_test.py  # Commented out - test files should be tracked
 
 # Neo4j
 neo4j/

@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 # Add the project root to Python path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent  # Go up one level since we're now in scripts/
 sys.path.insert(0, str(project_root))
 
 # Import and run the FastAPI app

@@ -120,7 +120,7 @@ class EpisodicMemoryMigrationChecker:
     
     def prepare_migration_file(self) -> str:
         """Prepare the migration file and return its path."""
-        migration_file = Path("sql/combined_episodic_memory_migration.sql")
+        migration_file = Path(__file__).parent.parent / "sql" / "combined_episodic_memory_migration.sql"
         
         if not migration_file.exists():
             print(f"\n❌ Migration file not found: {migration_file}")
@@ -154,7 +154,7 @@ class EpisodicMemoryMigrationChecker:
             for table in results['core_missing']:
                 print(f"   - {table}")
             print("\n   Please ensure the base schema is deployed before running this migration.")
-            print("   Run: python sql/deploy_schema_via_api.py")
+            print("   Run: python sql/scripts/deploy_schema_via_api.py")
             return False
         
         if results['episodic_exists']:

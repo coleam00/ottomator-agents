@@ -72,7 +72,7 @@ Render was ignoring the `render.yaml` configuration and using a default Django-s
 
 Run locally to verify configuration:
 ```bash
-python verify_deployment.py
+python scripts/verify_deployment.py
 ```
 
 Expected output should show:
@@ -97,7 +97,7 @@ This issue is now prevented by:
 
 **Modified**:
 - `/render.yaml` - Added clarifying comments
-- `/verify_deployment.py` - Enhanced configuration validation
+- `/scripts/verify_deployment.py` - Enhanced configuration validation
 
 **Status**: All changes committed and ready for deployment.
 

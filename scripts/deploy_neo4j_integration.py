@@ -32,6 +32,7 @@ class Neo4jIntegrationDeployer:
         self.client: Client = create_client(self.supabase_url, self.service_key)
         self.project_ref = self.supabase_url.split('//')[1].split('.')[0]
         self.script_dir = Path(__file__).parent
+        self.project_root = self.script_dir.parent  # Get project root
         
     def print_header(self, title: str):
         """Print formatted header"""
@@ -43,7 +44,7 @@ class Neo4jIntegrationDeployer:
         """Deploy database migration"""
         self.print_header("Database Migration Deployment")
         
-        migration_file = self.script_dir / 'sql' / 'migrations' / '003_neo4j_user_integration.sql'
+        migration_file = self.project_root / 'sql' / 'migrations' / '003_neo4j_user_integration.sql'
         
         if not migration_file.exists():
             print(f"❌ Migration file not found: {migration_file}")
@@ -85,7 +86,7 @@ class Neo4jIntegrationDeployer:
         self.print_header("Edge Function Deployment")
         
         function_name = "register-neo4j-user"
-        function_dir = self.script_dir / 'supabase' / 'functions' / function_name
+        function_dir = self.project_root / 'supabase' / 'functions' / function_name
         
         if not function_dir.exists():
             print(f"❌ Function directory not found: {function_dir}")

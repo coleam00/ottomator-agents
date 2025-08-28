@@ -43,7 +43,7 @@ Application → GraphitiClient → Graphiti Core → Neo4j
 
 ### 4. Test Execution Issues ⚠️
 
-- **Test Script Failures**: Original test script (`test_user_isolation.py`) fails due to missing methods
+- **Test Script Failures**: Original test script (`tests/test_user_isolation.py`) fails due to missing methods
 - **Performance Issues**: Graphiti operations timeout during testing (>2 minutes per operation)
 - **No Isolation Enforcement**: Users can potentially access all data without restriction
 
@@ -173,9 +173,9 @@ The Neo4j user isolation feature requires significant additional implementation 
 
 ## Test Artifacts
 
-- Original test script: `/test_user_isolation.py` (fails due to missing methods)
-- Adapted test script: `/test_user_isolation_current.py` (works with limitations)
-- Simple test script: `/test_user_isolation_simple.py` (basic validation)
+- Original test script: `/tests/test_user_isolation.py` (fails due to missing methods)
+- Adapted test script: `/tests/test_user_isolation_current.py` (works with limitations)
+- Simple test script: `/tests/test_user_isolation_simple.py` (basic validation)
 - This report: `/NEO4J_USER_ISOLATION_TEST_REPORT.md`
 
 ## Next Steps

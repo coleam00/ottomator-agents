@@ -32,7 +32,8 @@ class SupabaseMigrationRunner:
         # Initialize Supabase client with service role key for admin operations
         self.client: Client = create_client(self.supabase_url, self.service_key)
         self.script_dir = Path(__file__).parent
-        self.migrations_dir = self.script_dir / 'sql' / 'migrations'
+        self.project_root = self.script_dir.parent  # Get project root
+        self.migrations_dir = self.project_root / 'sql' / 'migrations'
         
     def _read_migration_file(self, filename: str) -> str:
         """Read migration file content."""

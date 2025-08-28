@@ -88,7 +88,7 @@ The Neo4j user isolation has been successfully implemented using Graphiti's buil
 ## Test Results
 
 ```bash
-python test_user_isolation_fixed.py
+python tests/test_user_isolation_fixed.py
 ```
 
 ### Test Summary:
