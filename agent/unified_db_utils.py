@@ -231,6 +231,14 @@ async def comprehensive_search(
             )
             embedding = response.data[0].embedding
             
+            # Normalize embedding to target dimension (768)
+            from agent.models import _safe_parse_int
+            target_dim = _safe_parse_int("VECTOR_DIMENSION", 768, min_value=1, max_value=10000)
+            
+            # Import the normalization function
+            from ingestion.embedding_truncator import normalize_embedding_dimension
+            embedding = normalize_embedding_dimension(embedding, target_dim)
+            
             if search_type == "vector":
                 search_results = await vector_search(embedding, limit)
             else:  # hybrid

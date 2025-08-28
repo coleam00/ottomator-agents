@@ -121,7 +121,7 @@ class SemanticChunker:
             except Exception as e:
                 logger.warning(f"Semantic chunking failed, falling back to simple chunking: {e}")
         
-        # Fallback to rule-based chunking
+        # Fallback to rule-based chunking (not async, so no await needed)
         return self._simple_chunk(content, base_metadata)
     
     async def _semantic_chunk(self, content: str) -> List[str]:
