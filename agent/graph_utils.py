@@ -71,7 +71,8 @@ class GraphitiClient:
         self.embedding_model = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
         # Import safe parsing function from models
         from .models import _safe_parse_int
-        self.embedding_dimensions = _safe_parse_int("VECTOR_DIMENSION", 1536, min_value=1, max_value=10000)
+        # Use 768 as default to match database schema
+        self.embedding_dimensions = _safe_parse_int("VECTOR_DIMENSION", 768, min_value=1, max_value=10000)
         
         if not self.embedding_api_key:
             raise ValueError("EMBEDDING_API_KEY environment variable not set")

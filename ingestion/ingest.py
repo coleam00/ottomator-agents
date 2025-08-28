@@ -21,7 +21,10 @@ from .graph_builder import create_graph_builder
 
 # Import agent utilities
 try:
-    from ..agent.db_utils import initialize_database, close_database, db_pool
+    from ..agent.unified_db_utils import (
+        initialize_database, close_database,
+        insert_document, bulk_insert_chunks, execute_query
+    )
     from ..agent.graph_utils import initialize_graph, close_graph
     from ..agent.models import IngestionConfig, IngestionResult
 except ImportError:
@@ -29,7 +32,10 @@ except ImportError:
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from agent.db_utils import initialize_database, close_database, db_pool
+    from agent.unified_db_utils import (
+        initialize_database, close_database,
+        insert_document, bulk_insert_chunks, execute_query
+    )
     from agent.graph_utils import initialize_graph, close_graph
     from agent.models import IngestionConfig, IngestionResult
 
@@ -180,13 +186,19 @@ class DocumentIngestionPipeline:
         
         logger.info(f"Processing document: {document_title}")
         
-        # Chunk the document
-        chunks = await self.chunker.chunk_document(
+        # Chunk the document (handle both async and sync chunkers)
+        chunk_result = self.chunker.chunk_document(
             content=document_content,
             title=document_title,
             source=document_source,
             metadata=document_metadata
         )
+        
+        # Check if it's a coroutine (async) or a list (sync)
+        if asyncio.iscoroutine(chunk_result):
+            chunks = await chunk_result
+        else:
+            chunks = chunk_result
         
         if not chunks:
             logger.warning(f"No chunks created for {document_title}")
@@ -342,60 +354,47 @@ class DocumentIngestionPipeline:
         chunks: List[DocumentChunk],
         metadata: Dict[str, Any]
     ) -> str:
-        """Save document and chunks to PostgreSQL."""
-        async with db_pool.acquire() as conn:
-            async with conn.transaction():
-                # Insert document
-                document_result = await conn.fetchrow(
-                    """
-                    INSERT INTO documents (title, source, content, metadata)
-                    VALUES ($1, $2, $3, $4)
-                    RETURNING id::text
-                    """,
-                    title,
-                    source,
-                    content,
-                    json.dumps(metadata)
-                )
-                
-                document_id = document_result["id"]
-                
-                # Insert chunks
-                for chunk in chunks:
-                    # Convert embedding to PostgreSQL vector string format
-                    embedding_data = None
-                    if hasattr(chunk, 'embedding') and chunk.embedding:
-                        # PostgreSQL vector format: '[1.0,2.0,3.0]' (no spaces after commas)
-                        embedding_data = '[' + ','.join(map(str, chunk.embedding)) + ']'
-                    
-                    await conn.execute(
-                        """
-                        INSERT INTO chunks (document_id, content, embedding, chunk_index, metadata, token_count)
-                        VALUES ($1::uuid, $2, $3::vector, $4, $5, $6)
-                        """,
-                        document_id,
-                        chunk.content,
-                        embedding_data,
-                        chunk.index,
-                        json.dumps(chunk.metadata),
-                        chunk.token_count
-                    )
-                
-                return document_id
+        """Save document and chunks to database using unified utilities."""
+        # Insert document
+        document_id = await insert_document(
+            title=title,
+            source=source,
+            content=content,
+            metadata=metadata
+        )
+        
+        # Prepare chunks for bulk insert
+        chunk_data = []
+        for chunk in chunks:
+            chunk_dict = {
+                "document_id": document_id,
+                "content": chunk.content,
+                "embedding": chunk.embedding if hasattr(chunk, 'embedding') and chunk.embedding else None,
+                "chunk_index": chunk.index,
+                "metadata": chunk.metadata,
+                "token_count": chunk.token_count
+            }
+            # Only add chunks with embeddings
+            if chunk_dict["embedding"]:
+                chunk_data.append(chunk_dict)
+        
+        # Bulk insert chunks
+        if chunk_data:
+            await bulk_insert_chunks(chunk_data)
+        
+        return document_id
     
     async def _clean_databases(self):
         """Clean existing data from databases."""
         logger.warning("Cleaning existing data from databases...")
         
-        # Clean PostgreSQL
-        async with db_pool.acquire() as conn:
-            async with conn.transaction():
-                await conn.execute("DELETE FROM messages")
-                await conn.execute("DELETE FROM sessions")
-                await conn.execute("DELETE FROM chunks")
-                await conn.execute("DELETE FROM documents")
+        # Clean database tables using unified execute_query
+        await execute_query("DELETE FROM messages")
+        await execute_query("DELETE FROM sessions")
+        await execute_query("DELETE FROM chunks")
+        await execute_query("DELETE FROM documents")
         
-        logger.info("Cleaned PostgreSQL database")
+        logger.info("Cleaned database")
         
         # Clean knowledge graph
         await self.graph_builder.clear_graph()

@@ -194,9 +194,17 @@ test-reports/
 
 # Neo4j
 neo4j/
+neo4j_analysis_*.json
 
 # Secrets
 secrets/
 *.key
 *.pem
 *.crt
+
+# PID files - should never be tracked
+*.pid
+ingestion.pid
+
+# Temporary checkpoint files
+ingestion_checkpoint.json

@@ -39,12 +39,12 @@ python test_supabase_connection.py
 **For Direct PostgreSQL:**
 ```bash
 # Execute schema creation
-# All embeddings are normalized to 1536 dimensions (Supabase IVFFlat limit)
+# All embeddings are normalized to 768 dimensions (standardized dimension)
 # Models are automatically normalized:
-# - Gemini gemini-embedding-001: 768/3072 → 1536
-# - OpenAI text-embedding-3-small: 1536 (native)
-# - OpenAI text-embedding-3-large: 3072 → 1536
-# - Ollama nomic-embed-text: 768 → 1536
+# - Gemini gemini-embedding-001: 3072 → 768
+# - OpenAI text-embedding-3-small: 1536 → 768
+# - OpenAI text-embedding-3-large: 3072 → 768
+# - Ollama nomic-embed-text: 768 (native)
 DB_PROVIDER=postgres
 psql -d "$DATABASE_URL" -f sql/schema.sql
 ```
@@ -174,8 +174,8 @@ LOG_LEVEL=INFO
 
 ### Embedding Dimensions
 
-The database is standardized to use 1536-dimensional vectors (Supabase IVFFlat limit).
-All embeddings from different models are automatically normalized to 1536 dimensions
+The database is standardized to use 768-dimensional vectors.
+All embeddings from different models are automatically normalized to 768 dimensions
 using the `embedding_truncator.py` module. No manual schema modifications needed.
 
 ## Working with the Agent

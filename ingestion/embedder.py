@@ -69,7 +69,7 @@ class EmbeddingGenerator:
         
         if model not in self.model_configs:
             logger.warning(f"Unknown model {model}, using default config")
-            self.config = {"dimensions": 1536, "max_tokens": 8191}  # Default to Supabase limit
+            self.config = {"dimensions": 768, "max_tokens": 8191}  # Default to database dimension
         else:
             self.config = self.model_configs[model]
     
@@ -89,9 +89,13 @@ class EmbeddingGenerator:
         
         for attempt in range(self.max_retries):
             try:
-                response = await embedding_client.embeddings.create(
-                    model=self.model,
-                    input=text
+                # Add timeout protection (30 seconds per request)
+                response = await asyncio.wait_for(
+                    embedding_client.embeddings.create(
+                        model=self.model,
+                        input=text
+                    ),
+                    timeout=30.0
                 )
                 
                 # Get the embedding and normalize to target dimension
@@ -100,6 +104,14 @@ class EmbeddingGenerator:
                 normalized_embedding = normalize_embedding_dimension(embedding, target_dim)
                 
                 return normalized_embedding
+                
+            except asyncio.TimeoutError:
+                logger.warning(f"Embedding request timeout (attempt {attempt + 1}/{self.max_retries})")
+                if attempt == self.max_retries - 1:
+                    raise Exception("Embedding generation timed out after all retries")
+                # Exponential backoff for timeouts
+                delay = self.retry_delay * (2 ** attempt)
+                await asyncio.sleep(delay)
                 
             except RateLimitError as e:
                 if attempt == self.max_retries - 1:
@@ -114,13 +126,17 @@ class EmbeddingGenerator:
                 logger.error(f"OpenAI API error: {e}")
                 if attempt == self.max_retries - 1:
                     raise
-                await asyncio.sleep(self.retry_delay)
+                # Exponential backoff for API errors
+                delay = self.retry_delay * (2 ** attempt)
+                await asyncio.sleep(delay)
                 
             except Exception as e:
                 logger.error(f"Unexpected error generating embedding: {e}")
                 if attempt == self.max_retries - 1:
                     raise
-                await asyncio.sleep(self.retry_delay)
+                # Exponential backoff for unexpected errors
+                delay = self.retry_delay * (2 ** attempt)
+                await asyncio.sleep(delay)
     
     async def generate_embeddings_batch(
         self,
@@ -150,9 +166,13 @@ class EmbeddingGenerator:
         
         for attempt in range(self.max_retries):
             try:
-                response = await embedding_client.embeddings.create(
-                    model=self.model,
-                    input=processed_texts
+                # Add timeout protection (60 seconds for batch)
+                response = await asyncio.wait_for(
+                    embedding_client.embeddings.create(
+                        model=self.model,
+                        input=processed_texts
+                    ),
+                    timeout=60.0
                 )
                 
                 # Normalize all embeddings to target dimension
@@ -163,6 +183,16 @@ class EmbeddingGenerator:
                 ]
                 
                 return normalized_embeddings
+                
+            except asyncio.TimeoutError:
+                logger.warning(f"Batch embedding timeout (attempt {attempt + 1}/{self.max_retries})")
+                if attempt == self.max_retries - 1:
+                    # Fallback to individual processing
+                    logger.info("Falling back to individual embedding generation")
+                    return await self._process_individually(processed_texts)
+                # Exponential backoff for timeouts
+                delay = self.retry_delay * (2 ** attempt)
+                await asyncio.sleep(delay)
                 
             except RateLimitError as e:
                 if attempt == self.max_retries - 1:
@@ -177,13 +207,17 @@ class EmbeddingGenerator:
                 if attempt == self.max_retries - 1:
                     # Fallback to individual processing
                     return await self._process_individually(processed_texts)
-                await asyncio.sleep(self.retry_delay)
+                # Exponential backoff for API errors
+                delay = self.retry_delay * (2 ** attempt)
+                await asyncio.sleep(delay)
                 
             except Exception as e:
                 logger.error(f"Unexpected error in batch embedding: {e}")
                 if attempt == self.max_retries - 1:
                     return await self._process_individually(processed_texts)
-                await asyncio.sleep(self.retry_delay)
+                # Exponential backoff for unexpected errors
+                delay = self.retry_delay * (2 ** attempt)
+                await asyncio.sleep(delay)
     
     async def _process_individually(
         self,

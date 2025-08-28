@@ -2,8 +2,8 @@
 Embedding truncator for compatibility with database dimension limits.
 
 This module handles normalization of embeddings to a standardized dimension.
-All embeddings are normalized to 1536 dimensions (Supabase's IVFFlat limit),
-regardless of the source model's native dimensions (e.g., Gemini's 768/3072).
+All embeddings are normalized to 768 dimensions,
+regardless of the source model's native dimensions (e.g., Gemini's 3072, OpenAI's 1536).
 """
 
 import logging
@@ -13,7 +13,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def truncate_embedding(embedding: List[float], target_dimension: int = 1536) -> List[float]:
+def truncate_embedding(embedding: List[float], target_dimension: int = 768) -> List[float]:
     """
     Truncate an embedding to a target dimension while preserving as much information as possible.
     
@@ -22,7 +22,7 @@ def truncate_embedding(embedding: List[float], target_dimension: int = 1536) -> 
     
     Args:
         embedding: Original embedding vector
-        target_dimension: Target dimension size (default 1536 for Supabase)
+        target_dimension: Target dimension size (default 768 for standardization)
     
     Returns:
         Truncated embedding vector
@@ -43,7 +43,7 @@ def truncate_embedding(embedding: List[float], target_dimension: int = 1536) -> 
     return truncated
 
 
-def pad_embedding(embedding: List[float], target_dimension: int = 1536) -> List[float]:
+def pad_embedding(embedding: List[float], target_dimension: int = 768) -> List[float]:
     """
     Pad an embedding to a target dimension if it's smaller.
     
@@ -64,7 +64,7 @@ def pad_embedding(embedding: List[float], target_dimension: int = 1536) -> List[
     return padded
 
 
-def normalize_embedding_dimension(embedding: List[float], target_dimension: int = 1536) -> List[float]:
+def normalize_embedding_dimension(embedding: List[float], target_dimension: int = 768) -> List[float]:
     """
     Normalize embedding to exact target dimension (truncate or pad as needed).
     
@@ -91,4 +91,5 @@ def get_target_dimension() -> int:
     import os
     from agent.models import _safe_parse_int
     
-    return _safe_parse_int("VECTOR_DIMENSION", 1536, min_value=1, max_value=10000)
+    # Default to 768 to match database schema (Gemini with truncation)
+    return _safe_parse_int("VECTOR_DIMENSION", 768, min_value=1, max_value=10000)

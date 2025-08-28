@@ -37,7 +37,7 @@ embedding_client = get_embedding_client()
 EMBEDDING_MODEL = get_embedding_model()
 
 
-def normalize_embedding_dimension(embedding: List[float], target_dimension: int = 1536) -> List[float]:
+def normalize_embedding_dimension(embedding: List[float], target_dimension: int = 768) -> List[float]:
     """
     Normalize embedding to exact target dimension (truncate or pad as needed).
     Simple inline version for tools module.
@@ -75,12 +75,14 @@ async def generate_embedding(text: str) -> List[float]:
             input=text
         )
         
-        # Get target dimension from environment
-        target_dim = _safe_parse_int("VECTOR_DIMENSION", 1536, min_value=1, max_value=10000)
+        # Get target dimension from environment (default 768 to match database)
+        target_dim = _safe_parse_int("VECTOR_DIMENSION", 768, min_value=1, max_value=10000)
         
         # Normalize embedding to target dimension
         embedding = response.data[0].embedding
         normalized_embedding = normalize_embedding_dimension(embedding, target_dim)
+        
+        logger.debug(f"Generated embedding: native dim={len(embedding)}, normalized dim={len(normalized_embedding)}")
         
         return normalized_embedding
     except Exception as e:
