@@ -59,8 +59,20 @@ class EpisodicMemoryService:
         if not self._enabled:
             logger.debug("Episodic memory disabled")
             return None
-            
-        episode_id = f"conversation_{session_id}_{uuid4().hex[:8]}"
+        
+        # Validate and sanitize session_id for episode ID generation
+        try:
+            from uuid import UUID
+            UUID(session_id)  # Validate UUID format
+            # Use the first 8 chars of the UUID for brevity
+            safe_session_id = session_id[:8]
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Invalid session_id format for episodic memory: {session_id}. Error: {e}")
+            # Use a sanitized version for the episode ID
+            import re
+            safe_session_id = re.sub(r'[^a-zA-Z0-9_-]', '_', str(session_id))[:20]
+        
+        episode_id = f"conversation_{safe_session_id}_{uuid4().hex[:8]}"
         timestamp = datetime.now(timezone.utc)
         
         # Extract medical entities and facts
@@ -285,7 +297,7 @@ class EpisodicMemoryService:
             await self.graph_client.add_episode(
                 episode_id=timeline_id,
                 content=content,
-                source=f"symptom_timeline_{session_id}",
+                source=f"symptom_timeline_{session_id[:8] if len(session_id) >= 8 else session_id}",
                 timestamp=timestamp,
                 metadata={
                     "session_id": session_id,
@@ -346,7 +358,16 @@ class EpisodicMemoryService:
         if not messages or not self._enabled:
             return None
             
-        episode_id = f"batch_conversation_{session_id}_{uuid4().hex[:8]}"
+        # Validate and sanitize session_id for episode ID generation
+        try:
+            from uuid import UUID
+            UUID(session_id)  # Validate UUID format
+            safe_session_id = session_id[:8]
+        except (ValueError, TypeError):
+            import re
+            safe_session_id = re.sub(r'[^a-zA-Z0-9_-]', '_', str(session_id))[:20]
+        
+        episode_id = f"batch_conversation_{safe_session_id}_{uuid4().hex[:8]}"
         
         # Format all messages into a cohesive episode
         content_parts = []

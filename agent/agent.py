@@ -49,6 +49,19 @@ class AgentDependencies:
     search_preferences: Dict[str, Any] = None
     
     def __post_init__(self):
+        """Validate session_id is a proper UUID."""
+        if self.session_id:
+            try:
+                from uuid import UUID
+                UUID(self.session_id)  # Validate UUID format
+            except (ValueError, TypeError) as e:
+                logger.error(f"Invalid session_id format in AgentDependencies: {self.session_id}")
+                # Don't raise here, just log - let the system handle it gracefully
+        
+        if self.search_preferences is None:
+            self.search_preferences = {}
+    
+    def __post_init__(self):
         if self.search_preferences is None:
             self.search_preferences = {
                 "use_vector": True,

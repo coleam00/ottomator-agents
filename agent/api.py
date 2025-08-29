@@ -164,15 +164,29 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 async def get_or_create_session(request: ChatRequest) -> str:
     """Get existing session or create new one."""
     if request.session_id:
-        session = await get_session(request.session_id)
-        if session:
-            return request.session_id
+        # Validate session_id is a valid UUID format
+        try:
+            # Attempt to validate the UUID format
+            from uuid import UUID
+            UUID(request.session_id)  # This will raise if invalid
+            
+            session = await get_session(request.session_id)
+            if session:
+                return request.session_id
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Invalid session_id format: {request.session_id}. Creating new session.")
+            # Fall through to create new session
     
-    # Create new session
-    return await create_session(
+    # Create new session with proper UUID
+    new_session_id = await create_session(
         user_id=request.user_id,
         metadata=request.metadata
     )
+    
+    # Log the new session ID for debugging
+    logger.info(f"Created new session: {new_session_id}")
+    
+    return new_session_id
 
 
 async def get_conversation_context(

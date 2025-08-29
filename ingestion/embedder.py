@@ -248,8 +248,9 @@ class EmbeddingGenerator:
                 
             except Exception as e:
                 logger.error(f"Failed to embed text: {e}")
-                # Use zero vector as fallback
-                embeddings.append([0.0] * self.config["dimensions"])
+                # Use zero vector as fallback with correct target dimension
+                target_dim = get_target_dimension()
+                embeddings.append([0.0] * target_dim)
         
         return embeddings
     
@@ -321,7 +322,9 @@ class EmbeddingGenerator:
                         "embedding_error": str(e),
                         "embedding_generated_at": datetime.now().isoformat()
                     })
-                    chunk.embedding = [0.0] * self.config["dimensions"]
+                    # Use correct target dimension for fallback
+                    target_dim = get_target_dimension()
+                    chunk.embedding = [0.0] * target_dim
                     embedded_chunks.append(chunk)
         
         logger.info(f"Generated embeddings for {len(embedded_chunks)} chunks")
