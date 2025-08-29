@@ -231,6 +231,70 @@ class GraphitiClient:
         
         logger.info(f"Added episode {episode_id} to knowledge graph with custom entities: {bool(entity_types)}")
     
+    async def add_episodes_bulk(
+        self,
+        bulk_episodes: List[Any],  # List[RawEpisode]
+        group_id: Optional[str] = None,
+        entity_types: Optional[Dict[str, Any]] = None,
+        excluded_entity_types: Optional[List[str]] = None,
+        edge_types: Optional[Dict[str, Any]] = None,
+        edge_type_map: Optional[Dict[tuple, List[str]]] = None
+    ) -> Dict[str, Any]:
+        """
+        Add multiple episodes to the knowledge graph in bulk.
+        
+        Args:
+            bulk_episodes: List of RawEpisode objects to add
+            group_id: Graph partition ID for user isolation
+            entity_types: Custom entity types for extraction
+            excluded_entity_types: Entity types to exclude from extraction
+            edge_types: Custom edge types for relationships
+            edge_type_map: Mapping of entity pairs to edge types
+        
+        Returns:
+            Results dictionary with success/failure information
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        try:
+            # Prepare kwargs for bulk ingestion
+            kwargs = {"bulk_episodes": bulk_episodes}
+            
+            if group_id is not None:
+                kwargs["group_id"] = group_id
+            
+            if entity_types:
+                kwargs["entity_types"] = entity_types
+            
+            if excluded_entity_types:
+                kwargs["excluded_entity_types"] = excluded_entity_types
+            
+            if edge_types:
+                kwargs["edge_types"] = edge_types
+            
+            if edge_type_map:
+                kwargs["edge_type_map"] = edge_type_map
+            
+            # Perform bulk ingestion
+            await self.graphiti.add_episode_bulk(**kwargs)
+            
+            logger.info(f"Successfully added {len(bulk_episodes)} episodes in bulk")
+            
+            return {
+                "success": True,
+                "episodes_added": len(bulk_episodes),
+                "errors": []
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to add episodes in bulk: {e}")
+            return {
+                "success": False,
+                "episodes_added": 0,
+                "errors": [str(e)]
+            }
+    
     async def search(
         self,
         query: str,

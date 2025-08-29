@@ -21,6 +21,8 @@ from .tools import (
     get_entity_relationships_tool,
     get_entity_timeline_tool,
     episodic_memory_search_tool,
+    knowledge_base_search_tool,
+    find_entity_paths_tool,
     VectorSearchInput,
     GraphSearchInput,
     HybridSearchInput,
@@ -28,7 +30,9 @@ from .tools import (
     DocumentListInput,
     EntityRelationshipInput,
     EntityTimelineInput,
-    EpisodicSearchInput
+    EpisodicSearchInput,
+    KnowledgeBaseSearchInput,
+    EntityPathInput
 )
 
 # Load environment variables
@@ -103,37 +107,35 @@ async def vector_search(
 
 
 @rag_agent.tool
-async def graph_search(
+async def knowledge_base_search(
     ctx: RunContext[AgentDependencies],
     query: str
 ) -> List[Dict[str, Any]]:
     """
-    Search the knowledge graph for facts and relationships.
+    Search the medical knowledge base for facts and relationships.
     
-    This tool queries the knowledge graph to find specific facts, relationships 
-    between entities, and temporal information. Best for finding specific facts,
-    relationships between companies/people/technologies, and time-based information.
-    Searches the shared knowledge base (group_id="0") by default.
+    This tool queries the medical knowledge graph that was ingested directly
+    into Neo4j. It finds entities, relationships, symptoms, treatments, and
+    medical facts. Best for finding specific medical information, relationships
+    between symptoms and treatments, and evidence-based medical knowledge.
     
     Args:
-        query: Search query to find facts and relationships
+        query: Search query to find medical facts and relationships
     
     Returns:
-        List of facts with associated episodes and temporal data
+        List of medical facts, entities, and relationships
     """
-    input_data = GraphSearchInput(query=query)
+    input_data = KnowledgeBaseSearchInput(query=query, limit=20)
     
-    # Search shared knowledge base (group_id="0")
-    results = await graph_search_tool(input_data, group_ids=["0"])
+    # Search knowledge base directly
+    results = await knowledge_base_search_tool(input_data)
     
     # Convert results to dict for agent
     return [
         {
             "fact": r.fact,
             "uuid": r.uuid,
-            "valid_at": r.valid_at,
-            "invalid_at": r.invalid_at,
-            "source_node_uuid": r.source_node_uuid
+            "source": "medical_knowledge_base"
         }
         for r in results
     ]
@@ -262,15 +264,16 @@ async def get_entity_relationships(
     depth: int = 2
 ) -> Dict[str, Any]:
     """
-    Get all relationships for a specific entity in the knowledge graph.
+    Get all relationships for a specific entity in the medical knowledge base.
     
-    This tool explores the knowledge graph to find how a specific entity
-    (company, person, technology) relates to other entities. Best for
-    understanding how companies or technologies relate to each other.
+    This tool explores the medical knowledge graph to find how a specific entity
+    (symptom, treatment, condition, hormone) relates to other medical entities.
+    Best for understanding how symptoms relate to treatments, how hormones affect
+    conditions, and mapping medical relationships.
     
     Args:
-        entity_name: Name of the entity to explore (e.g., "Google", "OpenAI")
-        depth: Maximum traversal depth for relationships (1-5)
+        entity_name: Name of the medical entity (e.g., "hot flashes", "estrogen", "HRT")
+        depth: Maximum traversal depth for relationships (1-3)
     
     Returns:
         Entity relationships and connected entities with relationship types
@@ -315,6 +318,37 @@ async def get_entity_timeline(
 
 
 @rag_agent.tool
+async def find_entity_paths(
+    ctx: RunContext[AgentDependencies],
+    entity1: str,
+    entity2: str,
+    max_depth: int = 3
+) -> List[Dict[str, Any]]:
+    """
+    Find paths connecting two entities in the medical knowledge base.
+    
+    This tool discovers how two medical entities are connected through
+    intermediate relationships. Useful for understanding indirect connections
+    between symptoms and treatments, or how different conditions relate.
+    
+    Args:
+        entity1: First medical entity (e.g., "menopause")
+        entity2: Second medical entity (e.g., "bone density")
+        max_depth: Maximum path length to search (1-4)
+    
+    Returns:
+        List of paths showing how entities are connected
+    """
+    input_data = EntityPathInput(
+        entity1=entity1,
+        entity2=entity2,
+        max_depth=max_depth
+    )
+    
+    return await find_entity_paths_tool(input_data)
+
+
+@rag_agent.tool
 async def episodic_memory(
     ctx: RunContext[AgentDependencies],
     query: str
@@ -322,7 +356,7 @@ async def episodic_memory(
     """
     Search episodic memory from previous conversations.
     
-    This tool searches the conversation history stored in the knowledge graph
+    This tool searches the conversation history stored via Graphiti
     to find relevant information from past interactions. It helps maintain
     context across sessions and remember important facts discussed previously.
     Use this to recall what was discussed in earlier conversations, especially

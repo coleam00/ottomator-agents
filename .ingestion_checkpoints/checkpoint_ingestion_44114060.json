@@ -1,0 +1,42 @@
+{
+  "session_id": "ingestion_44114060",
+  "started_at": "2025-08-29T12:27:34.684751+00:00",
+  "updated_at": "2025-08-29T12:27:34.685312+00:00",
+  "total_documents": 11,
+  "completed_documents": 0,
+  "failed_documents": 0,
+  "skipped_documents": 0,
+  "total_chunks_created": 0,
+  "total_episodes_created": 0,
+  "total_entities_extracted": 0,
+  "documents": {
+    "e1254cbe6cb74d34": {
+      "document_id": "e1254cbe6cb74d34",
+      "file_path": "medical_docs/doc10_mindfulness_journaling.md",
+      "title": "doc10_mindfulness_journaling",
+      "status": "in_progress",
+      "chunks_processed": 0,
+      "total_chunks": 0,
+      "episodes_created": 0,
+      "entities_extracted": 0,
+      "retry_count": 0,
+      "last_error": null,
+      "processing_time_ms": 0,
+      "started_at": "2025-08-29T12:27:34.685304+00:00",
+      "completed_at": null,
+      "checksum": "c57806c9676411b72fa3e0d27309a9693bc7493927164c92a60e446892954b85",
+      "metadata": {}
+    }
+  },
+  "configuration": {
+    "config": {
+      "chunk_size": 800,
+      "chunk_overlap": 200,
+      "max_chunk_size": 1600,
+      "use_semantic_chunking": false,
+      "extract_entities": true,
+      "skip_graph_building": false
+    }
+  },
+  "errors": []
+}

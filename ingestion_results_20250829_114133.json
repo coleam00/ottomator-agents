@@ -1,0 +1,91 @@
+{
+  "stats": {
+    "documents_processed": 0,
+    "chunks_created": 0,
+    "embeddings_generated": 0,
+    "errors": [
+      "Error processing doc10_mindfulness_journaling.md: 'DocumentChunk' object has no attribute 'strip'",
+      "Error processing doc11_difference_menopause_perimenopause.md: 'DocumentChunk' object has no attribute 'strip'",
+      "Error processing doc1_menopause_uknhs.md: 'DocumentChunk' object has no attribute 'strip'",
+      "Error processing doc2_estrogen_therapy.md: 'DocumentChunk' object has no attribute 'strip'",
+      "Error processing doc3_supplements.md: 'DocumentChunk' object has no attribute 'strip'",
+      "Error processing doc4_hotflashes_report.md: 'DocumentChunk' object has no attribute 'strip'",
+      "Error processing doc5_vaginal_dryness.md: 'DocumentChunk' object has no attribute 'strip'",
+      "Error processing doc6_perimenopause.md: 'DocumentChunk' object has no attribute 'strip'",
+      "Error processing doc7_weight_gain.md: 'DocumentChunk' object has no attribute 'strip'",
+      "Error processing doc8_bone_loss.md: 'DocumentChunk' object has no attribute 'strip'",
+      "Error processing doc9_premature_menopause.md: 'DocumentChunk' object has no attribute 'strip'"
+    ],
+    "start_time": 1756478485.622706,
+    "end_time": 1756478493.606105
+  },
+  "results": [
+    {
+      "file": "doc10_mindfulness_journaling.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    },
+    {
+      "file": "doc11_difference_menopause_perimenopause.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    },
+    {
+      "file": "doc1_menopause_uknhs.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    },
+    {
+      "file": "doc2_estrogen_therapy.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    },
+    {
+      "file": "doc3_supplements.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    },
+    {
+      "file": "doc4_hotflashes_report.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    },
+    {
+      "file": "doc5_vaginal_dryness.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    },
+    {
+      "file": "doc6_perimenopause.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    },
+    {
+      "file": "doc7_weight_gain.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    },
+    {
+      "file": "doc8_bone_loss.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    },
+    {
+      "file": "doc9_premature_menopause.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'DocumentChunk' object has no attribute 'strip'"
+    }
+  ],
+  "duration_seconds": 7.983399152755737
+}

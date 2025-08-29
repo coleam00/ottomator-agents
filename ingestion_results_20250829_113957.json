@@ -1,0 +1,91 @@
+{
+  "stats": {
+    "documents_processed": 0,
+    "chunks_created": 0,
+    "embeddings_generated": 0,
+    "errors": [
+      "Error processing doc10_mindfulness_journaling.md: object list can't be used in 'await' expression",
+      "Error processing doc11_difference_menopause_perimenopause.md: object list can't be used in 'await' expression",
+      "Error processing doc1_menopause_uknhs.md: object list can't be used in 'await' expression",
+      "Error processing doc2_estrogen_therapy.md: object list can't be used in 'await' expression",
+      "Error processing doc3_supplements.md: object list can't be used in 'await' expression",
+      "Error processing doc4_hotflashes_report.md: object list can't be used in 'await' expression",
+      "Error processing doc5_vaginal_dryness.md: object list can't be used in 'await' expression",
+      "Error processing doc6_perimenopause.md: object list can't be used in 'await' expression",
+      "Error processing doc7_weight_gain.md: object list can't be used in 'await' expression",
+      "Error processing doc8_bone_loss.md: object list can't be used in 'await' expression",
+      "Error processing doc9_premature_menopause.md: object list can't be used in 'await' expression"
+    ],
+    "start_time": 1756478389.100896,
+    "end_time": 1756478397.080703
+  },
+  "results": [
+    {
+      "file": "doc10_mindfulness_journaling.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    },
+    {
+      "file": "doc11_difference_menopause_perimenopause.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    },
+    {
+      "file": "doc1_menopause_uknhs.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    },
+    {
+      "file": "doc2_estrogen_therapy.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    },
+    {
+      "file": "doc3_supplements.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    },
+    {
+      "file": "doc4_hotflashes_report.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    },
+    {
+      "file": "doc5_vaginal_dryness.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    },
+    {
+      "file": "doc6_perimenopause.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    },
+    {
+      "file": "doc7_weight_gain.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    },
+    {
+      "file": "doc8_bone_loss.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    },
+    {
+      "file": "doc9_premature_menopause.md",
+      "success": false,
+      "chunks": 0,
+      "error": "object list can't be used in 'await' expression"
+    }
+  ],
+  "duration_seconds": 7.979807138442993
+}

@@ -1,0 +1,91 @@
+{
+  "stats": {
+    "documents_processed": 0,
+    "chunks_created": 0,
+    "embeddings_generated": 0,
+    "errors": [
+      "Error processing doc10_mindfulness_journaling.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'",
+      "Error processing doc11_difference_menopause_perimenopause.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'",
+      "Error processing doc1_menopause_uknhs.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'",
+      "Error processing doc2_estrogen_therapy.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'",
+      "Error processing doc3_supplements.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'",
+      "Error processing doc4_hotflashes_report.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'",
+      "Error processing doc5_vaginal_dryness.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'",
+      "Error processing doc6_perimenopause.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'",
+      "Error processing doc7_weight_gain.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'",
+      "Error processing doc8_bone_loss.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'",
+      "Error processing doc9_premature_menopause.md: 'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    ],
+    "start_time": 1756478437.812522,
+    "end_time": 1756478445.7821271
+  },
+  "results": [
+    {
+      "file": "doc10_mindfulness_journaling.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    },
+    {
+      "file": "doc11_difference_menopause_perimenopause.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    },
+    {
+      "file": "doc1_menopause_uknhs.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    },
+    {
+      "file": "doc2_estrogen_therapy.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    },
+    {
+      "file": "doc3_supplements.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    },
+    {
+      "file": "doc4_hotflashes_report.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    },
+    {
+      "file": "doc5_vaginal_dryness.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    },
+    {
+      "file": "doc6_perimenopause.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    },
+    {
+      "file": "doc7_weight_gain.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    },
+    {
+      "file": "doc8_bone_loss.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    },
+    {
+      "file": "doc9_premature_menopause.md",
+      "success": false,
+      "chunks": 0,
+      "error": "'EmbeddingGenerator' object has no attribute 'generate_embeddings'"
+    }
+  ],
+  "duration_seconds": 7.969605207443237
+}

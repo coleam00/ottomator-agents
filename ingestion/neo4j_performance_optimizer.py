@@ -29,11 +29,16 @@ logger = logging.getLogger(__name__)
 class BatchConfig:
     """Configuration for batch processing optimization."""
     max_batch_size: int = 10
-    batch_timeout: float = 30.0
-    max_retries: int = 2
-    retry_delay: float = 1.0
+    batch_timeout: float = 30.0  # Per-chunk timeout
+    document_timeout: float = 300.0  # Per-document timeout
+    max_retries: int = 3  # Increased for better resilience
+    retry_delay: float = 2.0  # Increased base delay
     enable_parallel: bool = False
     max_concurrent: int = 3
+    content_truncation_limit: int = 2000  # Aggressive truncation for Graphiti
+    enable_circuit_breaker: bool = True
+    circuit_breaker_threshold: int = 5
+    circuit_breaker_cooldown: float = 30.0
     
     def __post_init__(self):
         """Validate configuration values."""
@@ -201,11 +206,12 @@ class OptimizedNeo4jProcessor:
         self._cache = {}  # Simple cache for deduplication
         self._initialized = False
         
-        # Circuit breaker pattern
+        # Circuit breaker pattern with configurable settings
         self.consecutive_failures = 0
-        self.max_consecutive_failures = 5
+        self.max_consecutive_failures = self.config.circuit_breaker_threshold
         self.circuit_open = False
         self.circuit_open_until = 0
+        self.circuit_breaker_cooldown = self.config.circuit_breaker_cooldown
         
     async def initialize(self):
         """Initialize processor with connection pool."""
@@ -228,7 +234,7 @@ class OptimizedNeo4jProcessor:
             logger.error(f"Failed to initialize Neo4j processor: {e}")
             raise
     
-    async function close(self):
+    async def close(self):
         """Close processor and cleanup resources."""
         if self.connection_pool:
             await self.connection_pool.close()
@@ -251,9 +257,11 @@ class OptimizedNeo4jProcessor:
     
     def _trip_circuit_breaker(self):
         """Trip the circuit breaker after too many failures."""
+        if not self.config.enable_circuit_breaker:
+            return
         self.circuit_open = True
-        self.circuit_open_until = time.time() + 30  # 30 second cooldown
-        logger.warning(f"Circuit breaker tripped after {self.consecutive_failures} failures")
+        self.circuit_open_until = time.time() + self.circuit_breaker_cooldown
+        logger.warning(f"Circuit breaker tripped after {self.consecutive_failures} failures, cooldown: {self.circuit_breaker_cooldown}s")
     
     async def process_chunk_optimized(
         self,
@@ -293,12 +301,23 @@ class OptimizedNeo4jProcessor:
                     RETURN c.id as id
                     """
                     
+                    # Aggressive content truncation for Graphiti optimization
+                    truncated_content = chunk_content
+                    truncation_limit = self.config.content_truncation_limit
+                    if len(chunk_content) > truncation_limit:
+                        original_length = len(chunk_content)
+                        truncated_content = chunk_content[:truncation_limit]
+                        logger.info(
+                            f"Truncating chunk {chunk_id} from {original_length} to {truncation_limit} chars "
+                            f"(reduced by {original_length - truncation_limit} chars) for optimal Graphiti performance"
+                        )
+                    
                     # Execute with timeout
                     result = await asyncio.wait_for(
                         session.run(
                             query,
                             chunk_id=chunk_id,
-                            content=chunk_content[:4000],  # Truncate to avoid token limits
+                            content=truncated_content,  # Use truncated content
                             metadata=json.dumps(metadata) if metadata else "{}"
                         ),
                         timeout=self.config.batch_timeout
@@ -507,7 +526,17 @@ class GraphitiBatchProcessor:
     
     def __init__(self):
         """Initialize Graphiti batch processor."""
-        from ..agent.graph_utils import GraphitiClient
+        try:
+            # Try absolute import first
+            from agent.graph_utils import GraphitiClient
+        except ImportError:
+            # Fall back to relative import if absolute fails
+            try:
+                from ..agent.graph_utils import GraphitiClient
+            except ImportError:
+                logger.error("Failed to import GraphitiClient from agent.graph_utils")
+                raise ImportError("Could not import GraphitiClient. Please ensure agent.graph_utils is available.")
+        
         self.graph_client = GraphitiClient()
         self._initialized = False
         self.batch_queue = []
@@ -522,11 +551,22 @@ class GraphitiBatchProcessor:
             self._initialized = True
     
     async def close(self):
-        """Close Graphiti client."""
+        """Close Graphiti client and flush remaining episodes."""
         if self._initialized:
-            await self.flush_batch()
+            # Final flush with sequential processing for safety
+            await self.flush_batch(force_sequential=True)
             await self.graph_client.close()
             self._initialized = False
+            
+            # Log final statistics
+            if self.processing_stats["total_episodes"] > 0:
+                logger.info(
+                    f"GraphitiBatchProcessor final stats: "
+                    f"Total: {self.processing_stats['total_episodes']}, "
+                    f"Success: {self.processing_stats['successful_episodes']}, "
+                    f"Failed: {self.processing_stats['failed_episodes']}, "
+                    f"Total time: {self.processing_stats['total_processing_time']:.2f}s"
+                )
     
     async def add_to_batch(
         self,
@@ -536,9 +576,20 @@ class GraphitiBatchProcessor:
         metadata: Optional[Dict[str, Any]] = None
     ):
         """Add episode to batch queue."""
+        # Aggressive content truncation for Graphiti optimization (2000 chars)
+        truncated_content = content
+        truncation_limit = 2000  # Aggressive limit for Graphiti
+        if len(content) > truncation_limit:
+            original_length = len(content)
+            truncated_content = content[:truncation_limit]
+            logger.info(
+                f"Truncating episode {episode_id} from {original_length} to {truncation_limit} chars "
+                f"for optimal Graphiti performance"
+            )
+        
         self.batch_queue.append({
             "episode_id": episode_id,
-            "content": content[:4000],  # Truncate
+            "content": truncated_content,  # Use truncated content
             "source": source,
             "timestamp": datetime.now(timezone.utc),
             "metadata": metadata or {}
@@ -656,10 +707,34 @@ async def benchmark_neo4j_operations():
             print(f"  Avg Chunk Time: {metrics['avg_processing_time']:.3f}s")
             print(f"  Min/Max Time: {metrics['min_processing_time']:.3f}s / {metrics['max_processing_time']:.3f}s")
     
-    # Save detailed results
+    # Save detailed results with proper error handling
     output_file = f"neo4j_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    with open(output_file, 'w') as f:
-        json.dump(results, f, indent=2, default=str)
+    try:
+        # Ensure directory exists (in case we're in a subdirectory)
+        import os
+        output_dir = os.path.dirname(output_file) or '.'
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Write to temporary file first for atomic operation
+        temp_file = f"{output_file}.tmp"
+        with open(temp_file, 'w') as f:
+            json.dump(results, f, indent=2, default=str)
+        
+        # Move temp file to final location (atomic on most systems)
+        os.replace(temp_file, output_file)
+        
+    except (OSError, IOError) as e:
+        logger.error(f"Failed to save benchmark results to {output_file}: {e}")
+        # Try to save to a fallback location
+        fallback_file = f"/tmp/neo4j_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        try:
+            with open(fallback_file, 'w') as f:
+                json.dump(results, f, indent=2, default=str)
+            logger.info(f"Saved benchmark results to fallback location: {fallback_file}")
+            output_file = fallback_file
+        except Exception as fallback_error:
+            logger.error(f"Also failed to save to fallback location: {fallback_error}")
+            output_file = None
     
     print(f"\nDetailed results saved to: {output_file}")
     

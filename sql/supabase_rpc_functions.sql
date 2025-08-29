@@ -270,3 +270,101 @@ BEGIN
     ORDER BY dr.activity_date DESC;
 END;
 $$;
+
+-- ============================================================
+-- NEW SIMPLE RPC FUNCTIONS FOR FAST INGESTION
+-- ============================================================
+
+-- Simple function to count documents
+CREATE OR REPLACE FUNCTION count_documents()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN (SELECT COUNT(*) FROM documents);
+END;
+$$;
+
+-- Simple function to count chunks
+CREATE OR REPLACE FUNCTION count_chunks()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN (SELECT COUNT(*) FROM chunks);
+END;
+$$;
+
+-- Function to clean all data (use with caution!)
+CREATE OR REPLACE FUNCTION clean_all_data()
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    chunks_deleted INTEGER;
+    docs_deleted INTEGER;
+BEGIN
+    -- Delete all chunks first (foreign key constraint)
+    DELETE FROM chunks;
+    GET DIAGNOSTICS chunks_deleted = ROW_COUNT;
+    
+    -- Delete all documents
+    DELETE FROM documents;
+    GET DIAGNOSTICS docs_deleted = ROW_COUNT;
+    
+    RETURN json_build_object(
+        'success', true,
+        'chunks_deleted', chunks_deleted,
+        'documents_deleted', docs_deleted
+    );
+END;
+$$;
+
+-- Function to get document statistics
+CREATE OR REPLACE FUNCTION get_ingestion_stats()
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    doc_count INTEGER;
+    chunk_count INTEGER;
+    avg_chunks_per_doc NUMERIC;
+    total_content_size BIGINT;
+    latest_ingestion TIMESTAMPTZ;
+BEGIN
+    -- Get counts
+    SELECT COUNT(*) INTO doc_count FROM documents;
+    SELECT COUNT(*) INTO chunk_count FROM chunks;
+    
+    -- Calculate average chunks per document
+    IF doc_count > 0 THEN
+        avg_chunks_per_doc := chunk_count::NUMERIC / doc_count::NUMERIC;
+    ELSE
+        avg_chunks_per_doc := 0;
+    END IF;
+    
+    -- Get total content size
+    SELECT COALESCE(SUM(LENGTH(content)), 0) INTO total_content_size FROM documents;
+    
+    -- Get latest ingestion date
+    SELECT MAX(created_at) INTO latest_ingestion FROM documents;
+    
+    RETURN json_build_object(
+        'document_count', doc_count,
+        'chunk_count', chunk_count,
+        'avg_chunks_per_document', ROUND(avg_chunks_per_doc, 2),
+        'total_content_size_bytes', total_content_size,
+        'latest_ingestion', latest_ingestion
+    );
+END;
+$$;
+
+-- Grant execute permissions for new functions
+GRANT EXECUTE ON FUNCTION count_documents() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION count_chunks() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION clean_all_data() TO service_role;
+GRANT EXECUTE ON FUNCTION get_ingestion_stats() TO anon, authenticated, service_role;

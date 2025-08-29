@@ -1,0 +1,79 @@
+{
+  "stats": {
+    "documents_processed": 11,
+    "chunks_created": 89,
+    "embeddings_generated": 89,
+    "errors": [],
+    "start_time": 1756478521.188803,
+    "end_time": 1756478550.33417
+  },
+  "results": [
+    {
+      "file": "doc10_mindfulness_journaling.md",
+      "success": true,
+      "chunks": 5,
+      "error": null
+    },
+    {
+      "file": "doc11_difference_menopause_perimenopause.md",
+      "success": true,
+      "chunks": 5,
+      "error": null
+    },
+    {
+      "file": "doc1_menopause_uknhs.md",
+      "success": true,
+      "chunks": 17,
+      "error": null
+    },
+    {
+      "file": "doc2_estrogen_therapy.md",
+      "success": true,
+      "chunks": 10,
+      "error": null
+    },
+    {
+      "file": "doc3_supplements.md",
+      "success": true,
+      "chunks": 17,
+      "error": null
+    },
+    {
+      "file": "doc4_hotflashes_report.md",
+      "success": true,
+      "chunks": 6,
+      "error": null
+    },
+    {
+      "file": "doc5_vaginal_dryness.md",
+      "success": true,
+      "chunks": 2,
+      "error": null
+    },
+    {
+      "file": "doc6_perimenopause.md",
+      "success": true,
+      "chunks": 5,
+      "error": null
+    },
+    {
+      "file": "doc7_weight_gain.md",
+      "success": true,
+      "chunks": 6,
+      "error": null
+    },
+    {
+      "file": "doc8_bone_loss.md",
+      "success": true,
+      "chunks": 6,
+      "error": null
+    },
+    {
+      "file": "doc9_premature_menopause.md",
+      "success": true,
+      "chunks": 10,
+      "error": null
+    }
+  ],
+  "duration_seconds": 29.14536714553833
+}
