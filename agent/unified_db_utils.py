@@ -9,6 +9,9 @@ from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 
+# Import centralized embedding configuration
+from agent.embedding_config import EmbeddingConfig
+
 # Load environment variables
 load_dotenv()
 
@@ -231,13 +234,16 @@ async def comprehensive_search(
             )
             embedding = response.data[0].embedding
             
-            # Normalize embedding to target dimension (768)
-            from agent.models import _safe_parse_int
-            target_dim = _safe_parse_int("VECTOR_DIMENSION", 768, min_value=1, max_value=10000)
+            # Get target dimension from centralized configuration
+            target_dim = EmbeddingConfig.get_target_dimension()
             
             # Import the normalization function
             from ingestion.embedding_truncator import normalize_embedding_dimension
-            embedding = normalize_embedding_dimension(embedding, target_dim)
+            embedding = normalize_embedding_dimension(
+                embedding, 
+                target_dim,
+                model_name=embedding_model
+            )
             
             if search_type == "vector":
                 search_results = await vector_search(embedding, limit)

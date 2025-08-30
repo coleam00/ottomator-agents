@@ -13,7 +13,8 @@ from openai import RateLimitError, APIError
 from dotenv import load_dotenv
 
 from .chunker import DocumentChunk
-from .embedding_truncator import normalize_embedding_dimension, get_target_dimension
+from .embedding_truncator import normalize_embedding_dimension
+from agent.embedding_config import EmbeddingConfig
 
 # Import flexible providers
 try:
@@ -100,8 +101,12 @@ class EmbeddingGenerator:
                 
                 # Get the embedding and normalize to target dimension
                 embedding = response.data[0].embedding
-                target_dim = get_target_dimension()
-                normalized_embedding = normalize_embedding_dimension(embedding, target_dim)
+                target_dim = EmbeddingConfig.get_target_dimension()
+                normalized_embedding = normalize_embedding_dimension(
+                    embedding, 
+                    target_dim,
+                    model_name=self.model
+                )
                 
                 return normalized_embedding
                 
@@ -176,9 +181,13 @@ class EmbeddingGenerator:
                 )
                 
                 # Normalize all embeddings to target dimension
-                target_dim = get_target_dimension()
+                target_dim = EmbeddingConfig.get_target_dimension()
                 normalized_embeddings = [
-                    normalize_embedding_dimension(data.embedding, target_dim) 
+                    normalize_embedding_dimension(
+                        data.embedding, 
+                        target_dim,
+                        model_name=self.model
+                    ) 
                     for data in response.data
                 ]
                 

@@ -107,19 +107,20 @@ class GraphBuilder:
                 source_description = f"Document: {document_title} (Chunk: {chunk.index})"
                 
                 # Add episode to graph with group_id for shared knowledge
+                # Note: Graphiti doesn't support metadata parameter directly
+                # Include metadata in the content instead
+                metadata_str = (
+                    f"\n[Metadata: Document={document_title}, "
+                    f"Source={document_source}, Chunk={chunk.index}, "
+                    f"Type=shared_knowledge]"
+                )
+                episode_content_with_metadata = episode_content + metadata_str
+                
                 await self.graph_client.add_episode(
                     episode_id=episode_id,
-                    content=episode_content,
+                    content=episode_content_with_metadata,
                     source=source_description,
                     timestamp=datetime.now(timezone.utc),
-                    metadata={
-                        "document_title": document_title,
-                        "document_source": document_source,
-                        "chunk_index": chunk.index,
-                        "original_length": len(chunk.content),
-                        "processed_length": len(episode_content),
-                        "knowledge_type": "shared"
-                    },
                     group_id=group_id  # Pass group_id for proper partitioning
                 )
                 

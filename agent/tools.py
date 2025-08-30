@@ -33,6 +33,10 @@ from .episodic_memory import episodic_memory_service
 from .models import ChunkResult, GraphSearchResult, DocumentMetadata, _safe_parse_int
 from .providers import get_embedding_client, get_embedding_model
 
+# Import centralized embedding normalization
+from ingestion.embedding_truncator import normalize_embedding_dimension
+from agent.embedding_config import EmbeddingConfig
+
 # Load environment variables
 load_dotenv()
 
@@ -43,26 +47,8 @@ embedding_client = get_embedding_client()
 EMBEDDING_MODEL = get_embedding_model()
 
 
-def normalize_embedding_dimension(embedding: List[float], target_dimension: int = 768) -> List[float]:
-    """
-    Normalize embedding to exact target dimension (truncate or pad as needed).
-    Simple inline version for tools module.
-    """
-    import numpy as np
-    
-    current_dim = len(embedding)
-    if current_dim == target_dimension:
-        return embedding
-    elif current_dim > target_dimension:
-        # Truncate and renormalize
-        truncated = embedding[:target_dimension]
-        norm = np.linalg.norm(truncated)
-        if norm > 0:
-            truncated = (np.array(truncated) / norm).tolist()
-        return truncated
-    else:
-        # Pad with zeros
-        return embedding + [0.0] * (target_dimension - current_dim)
+# The normalize_embedding_dimension function is now imported from the centralized module
+# No need for a local implementation
 
 
 async def generate_embedding(text: str) -> List[float]:
@@ -81,14 +67,21 @@ async def generate_embedding(text: str) -> List[float]:
             input=text
         )
         
-        # Get target dimension from environment (default 768 to match database)
-        target_dim = _safe_parse_int("VECTOR_DIMENSION", 768, min_value=1, max_value=10000)
+        # Get target dimension from centralized configuration
+        target_dim = EmbeddingConfig.get_target_dimension()
         
-        # Normalize embedding to target dimension
+        # Normalize embedding to target dimension with model info for logging
         embedding = response.data[0].embedding
-        normalized_embedding = normalize_embedding_dimension(embedding, target_dim)
+        normalized_embedding = normalize_embedding_dimension(
+            embedding, 
+            target_dim,
+            model_name=EMBEDDING_MODEL
+        )
         
-        logger.debug(f"Generated embedding: native dim={len(embedding)}, normalized dim={len(normalized_embedding)}")
+        logger.debug(
+            f"Generated embedding: model={EMBEDDING_MODEL}, "
+            f"native dim={len(embedding)}, normalized dim={len(normalized_embedding)}"
+        )
         
         return normalized_embedding
     except Exception as e:

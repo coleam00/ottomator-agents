@@ -1,0 +1,113 @@
+{
+  "summary": {
+    "total_documents": 11,
+    "successful_documents": 11,
+    "failed_documents": 0,
+    "total_chunks_created": 114,
+    "total_episodes_created": 0,
+    "total_time_seconds": 29.28826594352722,
+    "avg_time_per_doc": 2.6625696312297475,
+    "neo4j_final_status": "disabled"
+  },
+  "documents": [
+    {
+      "success": true,
+      "document_id": "c6594b0f-46fb-4a9f-98e1-04dfe9b8ca60",
+      "title": "Mindfulness exercises",
+      "chunks_created": 7,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 3.2101480960845947
+    },
+    {
+      "success": true,
+      "document_id": "362fdba9-f508-42b2-b243-425dd5f941ea",
+      "title": "doc11_difference_menopause_perimenopause",
+      "chunks_created": 6,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 1.9009201526641846
+    },
+    {
+      "success": true,
+      "document_id": "ac93905d-1b23-4c73-bca5-80e3e0eb281c",
+      "title": "Menopause",
+      "chunks_created": 22,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 4.821161985397339
+    },
+    {
+      "success": true,
+      "document_id": "4217809c-5716-40cb-957e-e2bae9a4ab73",
+      "title": "Postmenopausal Estrogen Therapy Route of Administration and Risk of Venous Thromboembolism",
+      "chunks_created": 10,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 2.3960089683532715
+    },
+    {
+      "success": true,
+      "document_id": "5a25a3a4-7bcc-4a0d-abe2-a643f0772bfa",
+      "title": "Effectiveness of complementary health approaches for menopause symptoms",
+      "chunks_created": 22,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 4.60120701789856
+    },
+    {
+      "success": true,
+      "document_id": "15b4f9cd-a7c7-481e-ac77-c15a408d990a",
+      "title": "doc4_hotflashes_report",
+      "chunks_created": 7,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 2.027751922607422
+    },
+    {
+      "success": true,
+      "document_id": "e8355aaf-9a17-4fef-9b96-a6da0a94b099",
+      "title": "Vaginal dryness after menopause",
+      "chunks_created": 3,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 1.036651849746704
+    },
+    {
+      "success": true,
+      "document_id": "363aeaae-a4a7-4e2e-b342-a27b7dedde27",
+      "title": "Perimenopause - Symptoms and causes",
+      "chunks_created": 7,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 2.0041627883911133
+    },
+    {
+      "success": true,
+      "document_id": "877af274-3721-4a2f-a838-5ad607a86af2",
+      "title": "How to Prevent Menopause Weight Gain",
+      "chunks_created": 9,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 2.330044984817505
+    },
+    {
+      "success": true,
+      "document_id": "5a86a7a9-8707-4460-9157-57c3de40479b",
+      "title": "doc8_bone_loss",
+      "chunks_created": 9,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 2.1495769023895264
+    },
+    {
+      "success": true,
+      "document_id": "6d49bd99-4834-4fab-8656-1fd8afe166d5",
+      "title": "Premature Menopause",
+      "chunks_created": 12,
+      "episodes_created": 0,
+      "neo4j_skipped": true,
+      "processing_time": 2.8082470893859863
+    }
+  ]
+}

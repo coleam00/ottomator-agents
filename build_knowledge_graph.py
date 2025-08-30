@@ -95,11 +95,6 @@ class KnowledgeGraphBuilder:
                 content=episode_body,
                 source=f"Medical document: {doc_title}",
                 timestamp=datetime.now(timezone.utc),
-                metadata={
-                    "document_title": doc_title,
-                    "document_id": doc_id,
-                    "knowledge_type": "shared"
-                },
                 group_id="0"  # Shared knowledge base
             )
             

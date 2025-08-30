@@ -578,13 +578,11 @@ async def insert_chunk(
         Chunk ID
     """
     async with supabase_pool.acquire() as client:
-        # Convert embedding to PostgreSQL vector string format
-        embedding_str = '[' + ','.join(map(str, embedding)) + ']'
-        
+        # Keep embedding as array - Supabase handles vector conversion
         response = client.table("chunks").insert({
             "document_id": document_id,
             "content": content,
-            "embedding": embedding_str,
+            "embedding": embedding,  # Pass as array, not string
             "chunk_index": chunk_index,
             "metadata": metadata or {},
             "token_count": token_count
@@ -607,11 +605,8 @@ async def bulk_insert_chunks(chunks: List[Dict[str, Any]]) -> List[str]:
         List of chunk IDs
     """
     async with supabase_pool.acquire() as client:
-        # Convert embeddings to string format
-        for chunk in chunks:
-            if "embedding" in chunk and isinstance(chunk["embedding"], list):
-                chunk["embedding"] = '[' + ','.join(map(str, chunk["embedding"])) + ']'
-        
+        # Embeddings should be kept as arrays for Supabase pgvector
+        # Supabase handles the conversion to PostgreSQL vector type internally
         response = client.table("chunks").insert(chunks).execute()
         
         if response.data:

@@ -21,6 +21,10 @@ from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerCli
 from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
 from dotenv import load_dotenv
 
+# Import our clean patch module
+from agent.graphiti_patch import apply_graphiti_embedding_patch
+from agent.embedding_config import EmbeddingConfig
+
 # Load environment variables
 load_dotenv()
 
@@ -57,28 +61,52 @@ class GraphitiClient:
         if not self.neo4j_password:
             raise ValueError("NEO4J_PASSWORD environment variable not set")
         
-        # LLM configuration
+        # LLM configuration - use instance variables for provider state
+        self.llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
+        self.embedding_provider = os.getenv("EMBEDDING_PROVIDER", "openai").lower()
+        
+        # Base URLs and models from environment
         self.llm_base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
-        self.llm_api_key = os.getenv("LLM_API_KEY")
         self.llm_choice = os.getenv("LLM_CHOICE", "gpt-4.1-mini")
+        self.embedding_base_url = os.getenv("EMBEDDING_BASE_URL", "https://api.openai.com/v1")
+        # Provider-aware embedding model defaults
+        self.embedding_model = os.getenv(
+            "EMBEDDING_MODEL",
+            "gemini-embedding-001" if self.embedding_provider in ("gemini", "google") else "text-embedding-3-small"
+        )
+        
+        # API keys - select based on provider
+        self.llm_api_key = self._get_api_key_for_provider(self.llm_provider)
+        self.embedding_api_key = self._get_api_key_for_provider(self.embedding_provider, is_embedding=True)
         
         if not self.llm_api_key:
-            raise ValueError("LLM_API_KEY environment variable not set")
+            raise ValueError(f"API key not set for LLM provider: {self.llm_provider}")
+        if not self.embedding_api_key:
+            raise ValueError(f"API key not set for embedding provider: {self.embedding_provider}")
         
-        # Embedding configuration
-        self.embedding_base_url = os.getenv("EMBEDDING_BASE_URL", "https://api.openai.com/v1")
-        self.embedding_api_key = os.getenv("EMBEDDING_API_KEY")
-        self.embedding_model = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
         # Import safe parsing function from models
         from .models import _safe_parse_int
-        # Use 768 as default to match database schema
+        # Use 768 as default to meet Supabase limits and improve performance
         self.embedding_dimensions = _safe_parse_int("VECTOR_DIMENSION", 768, min_value=1, max_value=10000)
         
-        if not self.embedding_api_key:
-            raise ValueError("EMBEDDING_API_KEY environment variable not set")
-        
         self.graphiti: Optional[Graphiti] = None
+        self.embedding_normalizer = None  # Track embedding normalizer
         self._initialized = False
+    
+    def _get_api_key_for_provider(self, provider: str, is_embedding: bool = False) -> Optional[str]:
+        """Get the appropriate API key for a provider."""
+        # For embeddings, check EMBEDDING_API_KEY first
+        if is_embedding and os.getenv("EMBEDDING_API_KEY"):
+            return os.getenv("EMBEDDING_API_KEY")
+        
+        # Check provider-specific keys
+        if provider in ["gemini", "google"]:
+            return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or os.getenv("LLM_API_KEY")
+        elif provider == "openai":
+            return os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY")
+        else:
+            # For other providers (ollama, openrouter, etc.)
+            return os.getenv("LLM_API_KEY")
     
     async def initialize(self):
         """Initialize Graphiti client."""
@@ -86,9 +114,10 @@ class GraphitiClient:
             return
         
         try:
-            # Check LLM provider from environment (support both "gemini" and "google")
-            llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
-            embedding_provider = os.getenv("EMBEDDING_PROVIDER", "openai").lower()
+            # Use instance variables for provider configuration
+            # These may have been modified by fallback logic
+            llm_provider = self.llm_provider
+            embedding_provider = self.embedding_provider
             
             # Configure LLM client based on provider
             if llm_provider in ["gemini", "google"]:
@@ -109,6 +138,9 @@ class GraphitiClient:
                 )
                 llm_client = OpenAIClient(config=llm_config)
             
+            # Get target dimension from centralized config
+            target_dim = EmbeddingConfig.get_target_dimension()
+            
             # Configure embedder based on provider
             if embedding_provider in ["gemini", "google"]:
                 # Use Gemini for embeddings
@@ -116,7 +148,7 @@ class GraphitiClient:
                     config=GeminiEmbedderConfig(
                         api_key=self.embedding_api_key,
                         embedding_model=self.embedding_model,
-                        embedding_dim=self.embedding_dimensions  # Add missing embedding dimension
+                        embedding_dim=target_dim  # Use centralized dimension
                     )
                 )
             else:
@@ -125,7 +157,7 @@ class GraphitiClient:
                     config=OpenAIEmbedderConfig(
                         api_key=self.embedding_api_key,
                         embedding_model=self.embedding_model,
-                        embedding_dim=self.embedding_dimensions,
+                        embedding_dim=target_dim,  # Use centralized dimension
                         base_url=self.embedding_base_url
                     )
                 )
@@ -155,16 +187,52 @@ class GraphitiClient:
             # Build indices and constraints
             await self.graphiti.build_indices_and_constraints()
             
+            # Apply embedding normalization patch if needed
+            # This ensures all embeddings conform to the configured dimension
+            self.embedding_normalizer = apply_graphiti_embedding_patch(
+                self.graphiti, 
+                embedding_provider
+            )
+            
+            if self.embedding_normalizer:
+                logger.info(f"Embedding normalization active for {embedding_provider}")
+            
             self._initialized = True
             logger.info(f"Graphiti client initialized successfully with LLM: {self.llm_choice} and embedder: {self.embedding_model}")
             
         except Exception as e:
             logger.error(f"Failed to initialize Graphiti: {e}")
             raise
+
+    async def _fallback_to_openai_llm(self):
+        """Reinitialize Graphiti forcing OpenAI LLM to avoid Gemini schema issues."""
+        try:
+            # Close existing graphiti if any
+            if self.graphiti:
+                await self.graphiti.close()
+            
+            # Update instance variables instead of mutating environment
+            self.llm_provider = "openai"
+            self.llm_api_key = self._get_api_key_for_provider("openai")
+            
+            if not self.llm_api_key:
+                raise ValueError("OpenAI API key not available for fallback")
+            
+            self._initialized = False
+            await self.initialize()
+            logger.warning("Graphiti LLM provider fell back to OpenAI due to Gemini schema error")
+        except Exception as e:
+            logger.error(f"Failed to fallback to OpenAI LLM: {e}")
+            raise
     
     async def close(self):
         """Close Graphiti connection."""
         if self.graphiti:
+            # Remove embedding patch if applied
+            if self.embedding_normalizer:
+                self.embedding_normalizer.remove_patch()
+                self.embedding_normalizer = None
+            
             await self.graphiti.close()
             self.graphiti = None
             self._initialized = False
@@ -227,7 +295,26 @@ class GraphitiClient:
         if edge_type_map:
             episode_kwargs["edge_type_map"] = edge_type_map
         
-        await self.graphiti.add_episode(**episode_kwargs)
+        # Add metadata if provided
+        if metadata:
+            episode_kwargs["metadata"] = metadata
+        
+        try:
+            await self.graphiti.add_episode(**episode_kwargs)
+        except Exception as e:
+            # Only fallback if we're currently using Gemini/Google provider
+            if self.llm_provider in ["gemini", "google"]:
+                # Handle Gemini response_schema additional_properties error by falling back
+                err_str = str(e).lower()
+                if "additional_properties" in err_str or "response_schema" in err_str or "invalid json payload" in err_str:
+                    logger.error(f"Encountered Gemini schema error while adding episode, attempting fallback: {e}")
+                    await self._fallback_to_openai_llm()
+                    await self.graphiti.add_episode(**episode_kwargs)
+                else:
+                    raise
+            else:
+                # For non-Gemini providers, always re-raise the exception
+                raise
         
         logger.info(f"Added episode {episode_id} to knowledge graph with custom entities: {bool(entity_types)}")
     
@@ -325,7 +412,7 @@ class GraphitiClient:
             if group_ids is not None:
                 search_kwargs["group_ids"] = group_ids
             
-            # Use Graphiti's search method with optional group filtering
+            # Use Graphiti's search method - embeddings are now normalized at initialization
             results = await self.graphiti.search(**search_kwargs)
             
             # Convert results to dictionaries
