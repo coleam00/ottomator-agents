@@ -96,7 +96,7 @@ class EpisodicMemoryService:
             # Track symptom timeline if symptoms are mentioned
             for symptom in user_entities.get("symptoms", []):
                 await self.create_symptom_timeline(
-                    session_id=session_id,
+                    session_id=safe_session_id,  # Use sanitized session_id
                     symptom=symptom["name"],
                     timestamp=timestamp,
                     severity=symptom.get("severity"),
@@ -118,8 +118,8 @@ class EpisodicMemoryService:
             metadata=metadata
         )
         
-        # Source description for the episode
-        source_description = f"User conversation in session {session_id}"
+        # Source description for the episode (use safe_session_id to prevent leakage)
+        source_description = f"User conversation in session {safe_session_id}"
         
         # Extract user_id from metadata for group_id partitioning
         user_id = metadata.get("user_id") if metadata else None
@@ -284,7 +284,10 @@ class EpisodicMemoryService:
         metadata: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
         """Track symptom progression over time."""
-        timeline_id = f"symptom_timeline_{session_id}_{uuid4().hex[:8]}"
+        # Sanitize session_id for timeline_id
+        import re
+        safe_session_id = re.sub(r'[^a-zA-Z0-9_-]', '_', str(session_id))[:20]
+        timeline_id = f"symptom_timeline_{safe_session_id}_{uuid4().hex[:8]}"
         
         # Extract user_id from metadata for proper isolation
         user_id = metadata.get("user_id") if metadata else None
@@ -297,7 +300,7 @@ class EpisodicMemoryService:
             await self.graph_client.add_episode(
                 episode_id=timeline_id,
                 content=content,
-                source=f"symptom_timeline_{session_id[:8] if len(session_id) >= 8 else session_id}",
+                source=f"symptom_timeline_{safe_session_id}",
                 timestamp=timestamp,
                 metadata={
                     "session_id": session_id,
@@ -380,7 +383,7 @@ class EpisodicMemoryService:
             await self.graph_client.add_episode(
                 episode_id=episode_id,
                 content=episode_content,
-                source=f"Batch conversation from session {session_id}",
+                source=f"Batch conversation from session {safe_session_id}",
                 timestamp=datetime.now(timezone.utc),
                 metadata={
                     "session_id": session_id,

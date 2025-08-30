@@ -60,7 +60,14 @@ class ToolCache:
             Cache key string
         """
         # Create a deterministic string from args
-        args_str = json.dumps(args, sort_keys=True)
+        try:
+            # Try JSON serialization first
+            args_str = json.dumps(args, sort_keys=True)
+        except (TypeError, ValueError) as e:
+            # Fallback to repr for non-serializable objects
+            logger.debug(f"Args not JSON serializable, using repr: {e}")
+            args_str = repr(sorted(args.items()) if isinstance(args, dict) else args)
+        
         combined = f"{tool_name}:{args_str}"
         
         # Use hash for shorter keys

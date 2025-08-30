@@ -154,6 +154,8 @@ class OptimizedEmbeddingGenerator:
             embedding, timestamp = self.memory_cache[cache_key]
             if datetime.now() - timestamp < timedelta(seconds=self.cache_ttl):
                 self.stats["cache_hits"] += 1
+                # Update timestamp for true LRU behavior
+                self.memory_cache[cache_key] = (embedding, datetime.now())
                 return embedding
             else:
                 # Expired
@@ -177,14 +179,14 @@ class OptimizedEmbeddingGenerator:
             except Exception as e:
                 logger.debug(f"Redis set failed: {e}")
         
-        # Save to memory cache (LRU eviction)
+        # Save to memory cache (LRU eviction based on access time)
         if len(self.memory_cache) >= self.cache_max_size:
-            # Evict oldest entry
-            oldest_key = min(
+            # Evict least recently used (oldest access time)
+            lru_key = min(
                 self.memory_cache.keys(),
                 key=lambda k: self.memory_cache[k][1]
             )
-            del self.memory_cache[oldest_key]
+            del self.memory_cache[lru_key]
         
         self.memory_cache[cache_key] = (embedding, datetime.now())
     
@@ -335,7 +337,7 @@ class OptimizedEmbeddingGenerator:
                     start_char=chunk.start_char,
                     end_char=chunk.end_char,
                     metadata={
-                        **chunk.metadata,
+                        **(chunk.metadata or {}),  # Safe default for None metadata
                         "embedding_model": self.model,
                         "embedding_dimension": self.target_dimension,
                         "embedding_generated_at": datetime.now().isoformat()
