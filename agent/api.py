@@ -68,7 +68,8 @@ APP_PORT = _safe_parse_int("PORT", _safe_parse_int("APP_PORT", 8000, min_value=1
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # Background task management
-background_tasks: set = set()  # Use set for easier management
+import weakref
+background_tasks: weakref.WeakSet = weakref.WeakSet()  # Use WeakSet for automatic cleanup of completed tasks
 EPISODIC_MEMORY_TIMEOUT = float(os.getenv("EPISODIC_MEMORY_TIMEOUT", "30.0"))  # seconds
 EPISODIC_MEMORY_ASYNC = os.getenv("EPISODIC_MEMORY_ASYNC", "true").lower() == "true"  # Make it configurable
 
@@ -120,15 +121,18 @@ async def lifespan(app: FastAPI):
     
     try:
         # Cancel all background tasks
-        for task in background_tasks:
+        # Convert WeakSet to list to avoid modification during iteration
+        tasks_to_cancel = list(background_tasks)
+        
+        for task in tasks_to_cancel:
             if not task.done():
                 task.cancel()
         
         # Wait for tasks to complete with timeout
-        if background_tasks:
+        if tasks_to_cancel:
             try:
                 await asyncio.wait_for(
-                    asyncio.gather(*background_tasks, return_exceptions=True),
+                    asyncio.gather(*tasks_to_cancel, return_exceptions=True),
                     timeout=5.0
                 )
             except asyncio.TimeoutError:
@@ -374,12 +378,21 @@ async def save_conversation_turn(
             )
         )
         
-        # Add to background tasks list for lifecycle management
+        # Add to background tasks WeakSet for lifecycle management
+        # WeakSet automatically removes completed tasks when they're garbage collected
         global background_tasks
-        background_tasks.append(task)
+        background_tasks.add(task)
         
-        # Clean up completed tasks periodically
-        background_tasks = [t for t in background_tasks if not t.done()]
+        # Add a callback to ensure task cleanup on completion
+        def cleanup_task(t):
+            """Cleanup callback that safely handles WeakSet operations."""
+            try:
+                # WeakSet might have already removed it if garbage collected
+                background_tasks.discard(t)
+            except (KeyError, ReferenceError):
+                pass  # Task already removed, which is fine
+        
+        task.add_done_callback(cleanup_task)
         
         logger.debug(f"Initiated managed episodic memory creation for session {session_id}")
     except Exception as e:
@@ -421,7 +434,17 @@ async def _create_episodic_memory_with_timeout(
             # Create background task - won't block response
             task = asyncio.create_task(create_memory())
             background_tasks.add(task)
-            task.add_done_callback(background_tasks.discard)
+            
+            # Add a callback to ensure task cleanup on completion
+            def cleanup_callback(t):
+                """Cleanup callback that safely handles WeakSet operations."""
+                try:
+                    # WeakSet might have already removed it if garbage collected
+                    background_tasks.discard(t)
+                except (KeyError, ReferenceError):
+                    pass  # Task already removed, which is fine
+            
+            task.add_done_callback(cleanup_callback)
             logger.debug(f"Episodic memory creation scheduled in background for session {session_id}")
         else:
             # Run synchronously - will wait for completion
