@@ -144,20 +144,24 @@ class GraphitiClient:
             # Configure embedder based on provider
             if embedding_provider in ["gemini", "google"]:
                 # Use Gemini for embeddings
+                # IMPORTANT: Graphiti's embedding_dim parameter doesn't always work correctly
+                # The patch applied below ensures proper normalization
                 embedder = GeminiEmbedder(
                     config=GeminiEmbedderConfig(
                         api_key=self.embedding_api_key,
                         embedding_model=self.embedding_model,
-                        embedding_dim=target_dim  # Use centralized dimension
+                        embedding_dim=target_dim  # Use centralized dimension (768)
                     )
                 )
             else:
                 # Default to OpenAI embedder
+                # IMPORTANT: Graphiti's embedding_dim parameter doesn't always work correctly
+                # The patch applied below ensures proper normalization
                 embedder = OpenAIEmbedder(
                     config=OpenAIEmbedderConfig(
                         api_key=self.embedding_api_key,
                         embedding_model=self.embedding_model,
-                        embedding_dim=target_dim,  # Use centralized dimension
+                        embedding_dim=target_dim,  # Use centralized dimension (768)
                         base_url=self.embedding_base_url
                     )
                 )
@@ -189,13 +193,20 @@ class GraphitiClient:
             
             # Apply embedding normalization patch if needed
             # This ensures all embeddings conform to the configured dimension
+            # CRITICAL: This patch is essential for preventing dimension mismatches in Neo4j
             self.embedding_normalizer = apply_graphiti_embedding_patch(
                 self.graphiti, 
                 embedding_provider
             )
             
             if self.embedding_normalizer:
-                logger.info(f"Embedding normalization active for {embedding_provider}")
+                logger.info(f"Embedding normalization active for {embedding_provider} - target dimension: {target_dim}")
+            else:
+                logger.warning(
+                    f"Embedding normalization patch not applied for {embedding_provider}. "
+                    f"This may cause dimension mismatches. Target: {target_dim}, "
+                    f"Graphiti default: 1024"
+                )
             
             self._initialized = True
             logger.info(f"Graphiti client initialized successfully with LLM: {self.llm_choice} and embedder: {self.embedding_model}")
@@ -295,9 +306,12 @@ class GraphitiClient:
         if edge_type_map:
             episode_kwargs["edge_type_map"] = edge_type_map
         
-        # Add metadata if provided
+        # Note: Graphiti's add_episode does not accept a 'metadata' parameter directly
+        # Append metadata as JSON to the episode content so it's included in the graph
         if metadata:
-            episode_kwargs["metadata"] = metadata
+            import json
+            metadata_str = f"\n\n[Metadata: {json.dumps(metadata, default=str)}]"
+            episode_kwargs["episode_body"] = content + metadata_str
         
         try:
             await self.graphiti.add_episode(**episode_kwargs)

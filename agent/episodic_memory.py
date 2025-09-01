@@ -408,31 +408,143 @@ class EpisodicMemoryService:
     ) -> List[Dict[str, Any]]:
         """
         Search episodic memories with optional filtering.
+        
+        This method searches for relevant memories based on the query and filters them
+        by session and/or user. It prioritizes conversation episodes and relevant facts.
         """
         if not self._enabled:
             return []
-            
-        # Build search query with context
-        search_query = query
-        if session_id:
-            search_query = f"{query} session:{session_id}"
         
         try:
-            # Search with user's group_id if provided to ensure isolation
-            group_ids = [user_id] if user_id else None
-            results = await self.graph_client.search(search_query, group_ids=group_ids)
+            # Build search query with session context if provided
+            search_queries = []
             
-            # Filter to conversation episodes
-            conversation_results = [
-                r for r in results 
-                if isinstance(r, dict) and "conversation" in str(r.get("source_node_uuid", "")).lower()
-            ]
+            # Primary query with the user's message
+            search_queries.append(query)
             
-            return conversation_results[:limit]
+            # Add session-specific search if session_id provided
+            if session_id:
+                # Search for session-specific memories
+                search_queries.append(f"session {session_id} conversations")
+                
+            # Perform searches
+            all_results = []
+            for search_query in search_queries:
+                # Search with user's group_id if provided to ensure isolation
+                group_ids = [user_id] if user_id else None
+                results = await self.graph_client.search(search_query, group_ids=group_ids)
+                all_results.extend(results)
+            
+            # Deduplicate results based on UUID
+            seen_uuids = set()
+            unique_results = []
+            for result in all_results:
+                if isinstance(result, dict):
+                    uuid = result.get("uuid") or result.get("source_node_uuid")
+                    if uuid and uuid not in seen_uuids:
+                        seen_uuids.add(uuid)
+                        unique_results.append(result)
+            
+            # Prioritize results by relevance
+            scored_results = []
+            for result in unique_results:
+                score = 0
+                
+                # Higher score for conversation episodes
+                if "conversation" in str(result.get("source_node_uuid", "")).lower():
+                    score += 10
+                
+                # Higher score if session_id matches
+                if session_id and session_id in str(result.get("source_node_uuid", "")):
+                    score += 20
+                
+                # Higher score for recent memories (check validity)
+                if result.get("valid_at"):
+                    score += 5
+                
+                # Higher score if query terms appear in the fact
+                fact = result.get("fact", "").lower()
+                query_terms = query.lower().split()
+                matches = sum(1 for term in query_terms if term in fact)
+                score += matches * 2
+                
+                scored_results.append((score, result))
+            
+            # Sort by score (descending) and return top results
+            scored_results.sort(key=lambda x: x[0], reverse=True)
+            
+            return [result for _, result in scored_results[:limit]]
             
         except Exception as e:
             logger.error(f"Failed to search episodic memories: {e}")
             return []
+    
+    async def get_session_context(
+        self,
+        session_id: str,
+        limit: int = 5
+    ) -> Dict[str, Any]:
+        """
+        Get comprehensive context for a session including recent memories and key facts.
+        
+        This is optimized for pre-query context retrieval.
+        
+        Args:
+            session_id: Session identifier
+            limit: Maximum number of memories to retrieve
+        
+        Returns:
+            Dictionary with session context including memories, facts, and entities
+        """
+        if not self._enabled:
+            return {}
+        
+        try:
+            # Search for session-specific memories
+            session_memories = await self.search_episodic_memories(
+                query=f"session {session_id} conversation history",
+                session_id=session_id,
+                limit=limit
+            )
+            
+            # Extract key information
+            context = {
+                "session_id": session_id,
+                "memories": [],
+                "facts": [],
+                "entities": set(),
+                "topics": set()
+            }
+            
+            for memory in session_memories:
+                # Add memory summary
+                if "fact" in memory:
+                    context["memories"].append(memory["fact"])
+                    
+                    # Extract entities (simple extraction - could be enhanced)
+                    fact_lower = memory["fact"].lower()
+                    
+                    # Check for medical entities
+                    medical_keywords = ["symptom", "pain", "condition", "treatment", "medication", "diagnosis"]
+                    for keyword in medical_keywords:
+                        if keyword in fact_lower:
+                            context["topics"].add(keyword)
+                    
+                    # Extract any mentioned body parts
+                    body_parts = ["head", "chest", "stomach", "back", "leg", "arm", "throat", "ear", "eye"]
+                    for part in body_parts:
+                        if part in fact_lower:
+                            context["entities"].add(part)
+            
+            # Convert sets to lists for JSON serialization
+            context["entities"] = list(context["entities"])
+            context["topics"] = list(context["topics"])
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"Failed to get session context: {e}")
+            return {}
     
     async def get_session_timeline(
         self,

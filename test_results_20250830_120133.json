@@ -1,0 +1,14 @@
+{
+  "timestamp": "2025-08-30T12:01:33.426512",
+  "results": {
+    "vector_dimensions": false,
+    "session_validation": true,
+    "episodic_memory": true
+  },
+  "all_passed": false,
+  "environment": {
+    "db_provider": "supabase",
+    "embedding_provider": "google",
+    "target_dimension": 768
+  }
+}

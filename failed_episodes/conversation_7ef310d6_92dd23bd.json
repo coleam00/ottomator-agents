@@ -1,0 +1,60 @@
+{
+  "episode_id": "conversation_7ef310d6_92dd23bd",
+  "content": "User Query: What are the symptoms of migraine?\n\nAssistant Response: Common migraine symptoms include severe headache, nausea, and sensitivity to light.\n\nTools Used: vector_search",
+  "source": "User conversation in session 7ef310d6",
+  "timestamp": "2025-08-30T15:01:18.410761+00:00",
+  "metadata": {
+    "session_id": "7ef310d6-92aa-4ca8-bed3-91e215965993",
+    "user_id": null,
+    "conversation_turn": true,
+    "tools_used": [
+      "vector_search"
+    ],
+    "medical_entities": {
+      "user_entities": {
+        "symptoms": [],
+        "conditions": [],
+        "treatments": [],
+        "body_parts": []
+      },
+      "assistant_entities": {
+        "symptoms": [
+          {
+            "name": "ache",
+            "category": "pain",
+            "severity": "severe",
+            "location": "head",
+            "duration": null,
+            "context": "Common migraine symptoms include severe headache, nausea, and sensitivity to light."
+          },
+          {
+            "name": "nausea",
+            "category": "gastrointestinal",
+            "severity": "severe",
+            "location": "head",
+            "duration": null,
+            "context": "Common migraine symptoms include severe headache, nausea, and sensitivity to light."
+          },
+          {
+            "name": "headache",
+            "category": "neurological",
+            "severity": "severe",
+            "location": "head",
+            "duration": null,
+            "context": "Common migraine symptoms include severe headache, nausea, and sensitivity to light."
+          }
+        ],
+        "conditions": [],
+        "treatments": [],
+        "body_parts": [
+          "head"
+        ]
+      }
+    },
+    "fact_triples": [],
+    "importance_score": 0.5,
+    "test": "episodic_memory"
+  },
+  "error": "{code: Neo.ClientError.Statement.ArgumentError} {message: Invalid input for 'vector.similarity.cosine()': The supplied vectors do not have the same number of dimensions.}",
+  "failed_at": "2025-08-30T15:01:28.845379+00:00"
+}

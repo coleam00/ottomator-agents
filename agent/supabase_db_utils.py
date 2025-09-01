@@ -130,7 +130,8 @@ async def close_database():
 async def create_session(
     user_id: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
-    timeout_minutes: int = 60
+    timeout_minutes: int = 60,
+    session_id: Optional[str] = None
 ) -> str:
     """
     Create a new session with retry logic for SSL/connection issues.
@@ -139,6 +140,7 @@ async def create_session(
         user_id: Optional user identifier
         metadata: Optional session metadata
         timeout_minutes: Session timeout in minutes
+        session_id: Optional specific session ID to use (must be valid UUID)
     
     Returns:
         Session ID
@@ -146,11 +148,20 @@ async def create_session(
     async with supabase_pool.acquire() as client:
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=timeout_minutes)
         
-        response = client.table("sessions").insert({
+        session_data = {
             "user_id": user_id,
             "metadata": metadata or {},
             "expires_at": expires_at.isoformat()
-        }).execute()
+        }
+        
+        if session_id:
+            # Use provided session_id (for legacy session conversion)
+            session_data["id"] = session_id
+            # Use upsert to handle conflicts
+            response = client.table("sessions").upsert(session_data).execute()
+        else:
+            # Generate new session_id
+            response = client.table("sessions").insert(session_data).execute()
         
         if response.data:
             return response.data[0]["id"]

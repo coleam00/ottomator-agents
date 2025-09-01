@@ -1,0 +1,36 @@
+{
+  "episode_id": "conversation_session-175656608884_9e92f1c5",
+  "content": "User Query: Test with legacy session\n\nAssistant Response: This should handle legacy session IDs",
+  "source": "User conversation in session session-175656608884",
+  "timestamp": "2025-08-30T15:01:28.845830+00:00",
+  "metadata": {
+    "session_id": "session-1756566088845",
+    "user_id": null,
+    "conversation_turn": true,
+    "tools_used": [],
+    "medical_entities": {
+      "user_entities": {
+        "symptoms": [],
+        "conditions": [],
+        "treatments": [],
+        "body_parts": [
+          "leg"
+        ]
+      },
+      "assistant_entities": {
+        "symptoms": [],
+        "conditions": [],
+        "treatments": [],
+        "body_parts": [
+          "leg",
+          "hand"
+        ]
+      }
+    },
+    "fact_triples": [],
+    "importance_score": 0.5,
+    "legacy_test": true
+  },
+  "error": "{code: Neo.ClientError.Statement.ArgumentError} {message: Invalid input for 'vector.similarity.cosine()': The supplied vectors do not have the same number of dimensions.}",
+  "failed_at": "2025-08-30T15:01:33.425950+00:00"
+}

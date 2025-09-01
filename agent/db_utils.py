@@ -84,7 +84,8 @@ async def close_database():
 async def create_session(
     user_id: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
-    timeout_minutes: int = 60
+    timeout_minutes: int = 60,
+    session_id: Optional[str] = None
 ) -> str:
     """
     Create a new session.
@@ -93,23 +94,51 @@ async def create_session(
         user_id: Optional user identifier
         metadata: Optional session metadata
         timeout_minutes: Session timeout in minutes
+        session_id: Optional specific session ID to use (must be valid UUID)
     
     Returns:
         Session ID
     """
+    import uuid
+    
     async with db_pool.acquire() as conn:
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=timeout_minutes)
         
-        result = await conn.fetchrow(
-            """
-            INSERT INTO sessions (user_id, metadata, expires_at)
-            VALUES ($1, $2, $3)
-            RETURNING id::text
-            """,
-            user_id,
-            json.dumps(metadata or {}),
-            expires_at
-        )
+        if session_id:
+            # Validate session_id is a valid UUID
+            try:
+                uuid.UUID(session_id)
+            except ValueError:
+                raise ValueError(f"Invalid session_id: {session_id}. Must be a valid UUID.")
+            
+            # Use provided session_id (for legacy session conversion)
+            result = await conn.fetchrow(
+                """
+                INSERT INTO sessions (id, user_id, metadata, expires_at)
+                VALUES ($1::uuid, $2, $3, $4)
+                ON CONFLICT (id) DO UPDATE SET
+                    expires_at = EXCLUDED.expires_at,
+                    updated_at = NOW(),
+                    metadata = sessions.metadata || EXCLUDED.metadata
+                RETURNING id::text
+                """,
+                session_id,
+                user_id,
+                metadata or {},  # Pass dict directly, asyncpg handles JSON
+                expires_at
+            )
+        else:
+            # Generate new session_id
+            result = await conn.fetchrow(
+                """
+                INSERT INTO sessions (user_id, metadata, expires_at)
+                VALUES ($1, $2, $3)
+                RETURNING id::text
+                """,
+                user_id,
+                metadata or {},  # Pass dict directly, asyncpg handles JSON
+                expires_at
+            )
         
         return result["id"]
 
@@ -145,7 +174,7 @@ async def get_session(session_id: str) -> Optional[Dict[str, Any]]:
             return {
                 "id": result["id"],
                 "user_id": result["user_id"],
-                "metadata": json.loads(result["metadata"]),
+                "metadata": result["metadata"] if isinstance(result["metadata"], dict) else json.loads(result["metadata"]),
                 "created_at": result["created_at"].isoformat(),
                 "updated_at": result["updated_at"].isoformat(),
                 "expires_at": result["expires_at"].isoformat() if result["expires_at"] else None
@@ -169,12 +198,13 @@ async def update_session(session_id: str, metadata: Dict[str, Any]) -> bool:
         result = await conn.execute(
             """
             UPDATE sessions
-            SET metadata = metadata || $2::jsonb
+            SET metadata = metadata || $2::jsonb,
+                updated_at = NOW()
             WHERE id = $1::uuid
             AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
             """,
             session_id,
-            json.dumps(metadata)
+            metadata  # Pass dict directly, asyncpg handles JSON
         )
         
         return result.split()[-1] != "0"
@@ -209,7 +239,7 @@ async def add_message(
             session_id,
             role,
             content,
-            json.dumps(metadata or {})
+            metadata or {}  # Pass dict directly, asyncpg handles JSON
         )
         
         return result["id"]
