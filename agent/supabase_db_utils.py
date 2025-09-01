@@ -5,7 +5,8 @@ Supabase database utilities for PostgreSQL operations via Supabase API.
 import os
 import json
 import logging
-from typing import List, Dict, Any, Optional, Union
+import threading
+from typing import List, Dict, Any, Optional, Union, Tuple
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from contextlib import asynccontextmanager
@@ -21,8 +22,10 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Global connection pool instance (singleton)
-_global_supabase_pool: Optional['SupabasePool'] = None
+# Global connection pool instances (one for service role, one for anon)
+# Using a dict to store different pool instances based on use_service_role
+_supabase_pools: Dict[bool, 'SupabasePool'] = {}
+_pool_lock = threading.Lock()
 
 
 def is_ssl_connection_error(exception):
@@ -32,15 +35,32 @@ def is_ssl_connection_error(exception):
 
 
 def get_supabase_pool(use_service_role: bool = True) -> 'SupabasePool':
-    """Get or create the global Supabase connection pool (singleton pattern)."""
-    global _global_supabase_pool
+    """
+    Get or create a Supabase connection pool with proper thread safety.
     
-    if _global_supabase_pool is None:
-        _global_supabase_pool = SupabasePool(use_service_role=use_service_role)
-        _global_supabase_pool.initialize()
-        logger.info("Created global Supabase connection pool")
+    This function maintains separate pool instances for service role and anon key access,
+    ensuring the correct permissions are used based on the use_service_role parameter.
     
-    return _global_supabase_pool
+    Args:
+        use_service_role: If True, uses service role key; if False, uses anon key
+        
+    Returns:
+        SupabasePool instance configured with the appropriate credentials
+    """
+    # Fast path: check if pool already exists (double-checked locking pattern)
+    if use_service_role in _supabase_pools:
+        return _supabase_pools[use_service_role]
+    
+    # Slow path: acquire lock and create pool if needed
+    with _pool_lock:
+        # Check again inside the lock (another thread may have created it)
+        if use_service_role not in _supabase_pools:
+            pool = SupabasePool(use_service_role=use_service_role)
+            pool.initialize()
+            _supabase_pools[use_service_role] = pool
+            logger.info(f"Created Supabase connection pool ({'service role' if use_service_role else 'anon key'})")
+        
+        return _supabase_pools[use_service_role]
 
 
 class SupabasePool:
@@ -77,19 +97,23 @@ class SupabasePool:
         self.use_service_role = use_service_role
     
     def initialize(self):
-        """Create Supabase client with robust SSL handling and connection pooling."""
+        """Create Supabase client with robust SSL handling and optimized connection pooling."""
         if not self.client:
             try:
-                # Configure client options with optimized timeouts and pooling
+                # Configure client options with optimized settings for performance
                 options = ClientOptions(
-                    postgrest_client_timeout=30,  # Reduced from 60 for faster failures
+                    postgrest_client_timeout=30,  # Reasonable timeout for API calls
                     storage_client_timeout=30,
                     function_client_timeout=30,
-                    # Add connection pooling settings through headers
+                    # Optimize headers for connection reuse and performance
                     headers={
                         "X-Client-Info": "ottomator-agents",
                         "Connection": "keep-alive",  # Keep connections alive
-                        "Keep-Alive": "timeout=300, max=1000"  # 5 min timeout, max 1000 requests
+                        "Keep-Alive": "timeout=300, max=1000",  # 5 min timeout, max 1000 requests
+                        # Add cache control for better performance on read operations
+                        "Cache-Control": "no-transform",  # Prevent proxy transformation
+                        # Enable compression for better network performance
+                        "Accept-Encoding": "gzip, deflate, br"
                     }
                 )
                 
@@ -100,19 +124,33 @@ class SupabasePool:
                     options=options
                 )
                 
-                # Configure the underlying httpx client if accessible for better pooling
-                if hasattr(self.client, 'postgrest'):
-                    # The postgrest client uses httpx internally which handles connection pooling
-                    # Set reasonable limits to prevent connection exhaustion
-                    if hasattr(self.client.postgrest, '_session'):
-                        # Update session configuration if available
-                        self.client.postgrest._session.limits = httpx.Limits(
-                            max_keepalive_connections=20,  # Pool size
-                            max_connections=100,  # Total connections
-                            keepalive_expiry=300  # 5 minutes
-                        )
+                # Configure the underlying httpx client for optimal connection pooling
+                if hasattr(self.client, 'postgrest') and hasattr(self.client.postgrest, '_session'):
+                    # Configure connection pool with optimized settings
+                    # These settings balance performance with resource usage
+                    self.client.postgrest._session.limits = httpx.Limits(
+                        max_keepalive_connections=50,  # Increased pool size for better concurrency
+                        max_connections=100,  # Total connection limit
+                        keepalive_expiry=300  # 5 minutes keepalive
+                    )
+                    
+                    # Configure timeout settings for better reliability
+                    self.client.postgrest._session.timeout = httpx.Timeout(
+                        connect=5.0,  # Connection timeout
+                        read=30.0,    # Read timeout
+                        write=30.0,   # Write timeout  
+                        pool=5.0      # Pool acquisition timeout
+                    )
                 
-                logger.info(f"Supabase client initialized with connection pooling ({'service role' if self.use_service_role else 'anon key'})")
+                # Similarly configure other clients if they exist
+                if hasattr(self.client, 'storage') and hasattr(self.client.storage, '_session'):
+                    self.client.storage._session.limits = httpx.Limits(
+                        max_keepalive_connections=20,
+                        max_connections=50,
+                        keepalive_expiry=300
+                    )
+                
+                logger.info(f"Supabase client initialized with optimized connection pooling ({'service role' if self.use_service_role else 'anon key'})")
             except Exception as e:
                 logger.error(f"Failed to initialize Supabase client: {e}")
                 # Re-raise to allow retry logic to handle it
@@ -133,18 +171,38 @@ class SupabasePool:
         yield self.client
 
 
-# Global Supabase pool instance
-supabase_pool = SupabasePool()
+# Default pool instance for backward compatibility
+# This maintains the existing API where code expects a global `supabase_pool` variable
+class _DefaultSupabasePool:
+    """Proxy object that always returns the current service role pool."""
+    
+    def __getattr__(self, name):
+        """Delegate all attribute access to the actual pool."""
+        pool = get_supabase_pool(use_service_role=True)
+        return getattr(pool, name)
+    
+    def acquire(self):
+        """Get the acquire method from the actual pool."""
+        pool = get_supabase_pool(use_service_role=True)
+        return pool.acquire()
+
+# Create a global instance that acts as a proxy to the actual pool
+supabase_pool = _DefaultSupabasePool()
 
 
 async def initialize_database():
     """Initialize Supabase client."""
-    supabase_pool.initialize()
+    pool = get_supabase_pool(use_service_role=True)
+    pool.initialize()
 
 
 async def close_database():
     """Close Supabase client."""
-    supabase_pool.close()
+    # Close all pools
+    with _pool_lock:
+        for pool in _supabase_pools.values():
+            pool.close()
+        _supabase_pools.clear()
 
 
 # Session Management Functions
