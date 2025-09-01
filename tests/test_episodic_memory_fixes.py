@@ -181,10 +181,12 @@ class TestEpisodicMemoryFixes:
     @pytest.mark.asyncio
     async def test_background_task_lifecycle_management(self):
         """Test that background tasks are properly managed."""
-        from agent.api import background_tasks
+        from agent import api
+        import weakref
         
-        # Clear any existing tasks
-        background_tasks.clear()
+        # Clear any existing tasks (WeakSet doesn't have clear, so recreate)
+        api.background_tasks = weakref.WeakSet()
+        background_tasks = api.background_tasks
         
         # Create a mock task
         async def mock_task():
@@ -193,10 +195,10 @@ class TestEpisodicMemoryFixes:
         
         # Add task to background_tasks
         task = asyncio.create_task(mock_task())
-        background_tasks.append(task)
+        background_tasks.add(task)
         
-        # Task should be in the list
-        assert len(background_tasks) == 1
+        # Task should be in the set (check by converting to list)
+        assert len(list(background_tasks)) == 1
         assert not task.done()
         
         # Wait for task to complete
@@ -205,9 +207,10 @@ class TestEpisodicMemoryFixes:
         # Task should be done
         assert task.done()
         
-        # Cleanup of completed tasks
-        cleaned_tasks = [t for t in background_tasks if not t.done()]
-        assert len(cleaned_tasks) == 0
+        # Cleanup of completed tasks (WeakSet will auto-clean when garbage collected)
+        # For testing, we can manually check completed tasks
+        active_tasks = [t for t in background_tasks if not t.done()]
+        assert len(active_tasks) == 0  # Task is done
     
     @pytest.mark.asyncio
     async def test_fallback_storage_for_failed_episodes(self):

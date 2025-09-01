@@ -21,9 +21,10 @@ from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerCli
 from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
 from dotenv import load_dotenv
 
-# Import our clean patch module
+# Import our clean patch modules
 from agent.graphiti_patch import apply_graphiti_embedding_patch
 from agent.embedding_config import EmbeddingConfig
+from agent.gemini_json_patch import apply_gemini_json_patch
 
 # Load environment variables
 load_dotenv()
@@ -121,6 +122,9 @@ class GraphitiClient:
             
             # Configure LLM client based on provider
             if llm_provider in ["gemini", "google"]:
+                # Apply Gemini JSON extraction patch before creating client
+                apply_gemini_json_patch()
+                
                 # Use Gemini for LLM
                 llm_config = LLMConfig(
                     api_key=self.llm_api_key,
