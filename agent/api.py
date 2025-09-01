@@ -380,7 +380,6 @@ async def save_conversation_turn(
         
         # Add to background tasks WeakSet for lifecycle management
         # WeakSet automatically removes completed tasks when they're garbage collected
-        global background_tasks
         background_tasks.add(task)
         
         # Add a callback to ensure task cleanup on completion
