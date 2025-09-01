@@ -68,8 +68,9 @@ APP_PORT = _safe_parse_int("PORT", _safe_parse_int("APP_PORT", 8000, min_value=1
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # Background task management
-background_tasks: List[asyncio.Task] = []
+background_tasks: set = set()  # Use set for easier management
 EPISODIC_MEMORY_TIMEOUT = float(os.getenv("EPISODIC_MEMORY_TIMEOUT", "30.0"))  # seconds
+EPISODIC_MEMORY_ASYNC = os.getenv("EPISODIC_MEMORY_ASYNC", "true").lower() == "true"  # Make it configurable
 
 # Configure logging
 logging.basicConfig(
@@ -393,26 +394,41 @@ async def _create_episodic_memory_with_timeout(
     tools_dict: Optional[List[Dict[str, Any]]],
     metadata: Optional[Dict[str, Any]]
 ):
-    """Create episodic memory with timeout and error handling."""
+    """Create episodic memory with timeout and error handling - can run async or sync."""
     try:
         from .episodic_memory import episodic_memory_service
         
-        # Apply timeout to episodic memory creation
-        await asyncio.wait_for(
-            episodic_memory_service.create_conversation_episode(
-                session_id=session_id,
-                user_message=user_message,
-                assistant_response=assistant_message,
-                tools_used=tools_dict,
-                metadata=metadata
-            ),
-            timeout=EPISODIC_MEMORY_TIMEOUT
-        )
-        logger.info(f"Successfully created episodic memory for session {session_id}")
-    except asyncio.TimeoutError:
-        logger.error(f"Episodic memory creation timed out after {EPISODIC_MEMORY_TIMEOUT}s for session {session_id}")
+        async def create_memory():
+            """Inner function to create episodic memory."""
+            try:
+                await asyncio.wait_for(
+                    episodic_memory_service.create_conversation_episode(
+                        session_id=session_id,
+                        user_message=user_message,
+                        assistant_response=assistant_message,
+                        tools_used=tools_dict,
+                        metadata=metadata
+                    ),
+                    timeout=EPISODIC_MEMORY_TIMEOUT
+                )
+                logger.info(f"Successfully created episodic memory for session {session_id}")
+            except asyncio.TimeoutError:
+                logger.error(f"Episodic memory creation timed out after {EPISODIC_MEMORY_TIMEOUT}s for session {session_id}")
+            except Exception as e:
+                logger.error(f"Failed to create episodic memory for session {session_id}: {e}")
+        
+        if EPISODIC_MEMORY_ASYNC:
+            # Create background task - won't block response
+            task = asyncio.create_task(create_memory())
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
+            logger.debug(f"Episodic memory creation scheduled in background for session {session_id}")
+        else:
+            # Run synchronously - will wait for completion
+            await create_memory()
+            
     except Exception as e:
-        logger.error(f"Failed to create episodic memory for session {session_id}: {e}")
+        logger.error(f"Failed to create episodic memory task for session {session_id}: {e}")
 
 
 async def get_episodic_context(

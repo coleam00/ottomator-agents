@@ -33,9 +33,11 @@ class EpisodicMemoryService:
         self._pending_episodes = []
         self._fallback_dir = Path(os.getenv("EPISODIC_FALLBACK_PATH", "./failed_episodes"))
         self._fallback_dir.mkdir(exist_ok=True)
-        self._extract_medical_entities = os.getenv("MEDICAL_ENTITY_EXTRACTION", "true").lower() == "true"
+        self._extract_medical_entities = os.getenv("MEDICAL_ENTITY_EXTRACTION", "false").lower() == "true"  # Disabled by default for speed
         self._fact_confidence_threshold = float(os.getenv("FACT_EXTRACTION_CONFIDENCE", "0.7"))
         self.entity_extractor = medical_entity_extractor
+        self._memory_cache = {}  # Simple in-memory cache
+        self._cache_ttl = int(os.getenv("EPISODIC_CACHE_TTL", "300"))  # 5 minutes default
         
     async def create_conversation_episode(
         self,
@@ -407,13 +409,20 @@ class EpisodicMemoryService:
         limit: int = 10
     ) -> List[Dict[str, Any]]:
         """
-        Search episodic memories with optional filtering.
+        Search episodic memories with optional filtering and caching.
         
         This method searches for relevant memories based on the query and filters them
         by session and/or user. It prioritizes conversation episodes and relevant facts.
         """
         if not self._enabled:
             return []
+        
+        # Check cache first
+        cache_key = f"search:{query}:{session_id}:{user_id}:{limit}"
+        cached_result = self._get_from_cache(cache_key)
+        if cached_result is not None:
+            logger.debug(f"Cache hit for episodic memory search: {cache_key}")
+            return cached_result
         
         try:
             # Build search query with session context if provided
@@ -473,7 +482,12 @@ class EpisodicMemoryService:
             # Sort by score (descending) and return top results
             scored_results.sort(key=lambda x: x[0], reverse=True)
             
-            return [result for _, result in scored_results[:limit]]
+            results = [result for _, result in scored_results[:limit]]
+            
+            # Cache the results
+            self._set_cache(cache_key, results)
+            
+            return results
             
         except Exception as e:
             logger.error(f"Failed to search episodic memories: {e}")
@@ -558,10 +572,17 @@ class EpisodicMemoryService:
             # Search for all episodes from this session
             results = await self.graph_client.search(f"session {session_id}")
             
-            # Sort by temporal validity
+            # Sort by temporal validity with proper None handling
+            def get_sort_key(x):
+                """Safe sort key that handles None values."""
+                valid_at = x.get("valid_at")
+                if valid_at is None:
+                    return ""  # Empty string sorts to the end
+                return str(valid_at)
+            
             timeline = sorted(
                 results,
-                key=lambda x: x.get("valid_at", ""),
+                key=get_sort_key,
                 reverse=True
             )
             
@@ -587,10 +608,17 @@ class EpisodicMemoryService:
                 group_ids=[user_id] if user_id else None  # Filter by user's group_id
             )
             
-            # Sort by recency
+            # Sort by recency with proper None handling
+            def get_sort_key(x):
+                """Safe sort key that handles None values."""
+                valid_at = x.get("valid_at")
+                if valid_at is None:
+                    return ""  # Empty string sorts to the end
+                return str(valid_at)
+            
             user_memories = sorted(
                 results,
-                key=lambda x: x.get("valid_at", ""),
+                key=get_sort_key,
                 reverse=True
             )
             
@@ -660,6 +688,29 @@ class EpisodicMemoryService:
                 logger.error(f"Failed to retry episode from {filepath}: {e}")
         
         return retry_count
+    
+    def _get_from_cache(self, key: str) -> Optional[Any]:
+        """Get value from cache if not expired."""
+        if key in self._memory_cache:
+            cached_data, timestamp = self._memory_cache[key]
+            if datetime.now(timezone.utc).timestamp() - timestamp < self._cache_ttl:
+                return cached_data
+            else:
+                # Expired, remove from cache
+                del self._memory_cache[key]
+        return None
+    
+    def _set_cache(self, key: str, value: Any):
+        """Set value in cache with timestamp."""
+        self._memory_cache[key] = (value, datetime.now(timezone.utc).timestamp())
+        
+        # Simple cache size management - remove oldest entries if cache is too large
+        max_cache_size = int(os.getenv("EPISODIC_CACHE_SIZE", "100"))
+        if len(self._memory_cache) > max_cache_size:
+            # Remove oldest entries
+            sorted_items = sorted(self._memory_cache.items(), key=lambda x: x[1][1])
+            for old_key, _ in sorted_items[:len(self._memory_cache) - max_cache_size]:
+                del self._memory_cache[old_key]
 
 
 class EpisodicMemoryQueue:

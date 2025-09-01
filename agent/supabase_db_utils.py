@@ -21,11 +21,26 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Global connection pool instance (singleton)
+_global_supabase_pool: Optional['SupabasePool'] = None
+
 
 def is_ssl_connection_error(exception):
     """Check if an exception is an SSL/connection error that should be retried."""
     error_str = str(exception)
     return any(indicator in error_str for indicator in ['525', '520', 'SSL', 'handshake', 'certificate'])
+
+
+def get_supabase_pool(use_service_role: bool = True) -> 'SupabasePool':
+    """Get or create the global Supabase connection pool (singleton pattern)."""
+    global _global_supabase_pool
+    
+    if _global_supabase_pool is None:
+        _global_supabase_pool = SupabasePool(use_service_role=use_service_role)
+        _global_supabase_pool.initialize()
+        logger.info("Created global Supabase connection pool")
+    
+    return _global_supabase_pool
 
 
 class SupabasePool:
@@ -62,14 +77,20 @@ class SupabasePool:
         self.use_service_role = use_service_role
     
     def initialize(self):
-        """Create Supabase client with robust SSL handling."""
+        """Create Supabase client with robust SSL handling and connection pooling."""
         if not self.client:
             try:
-                # Configure client options with proper timeouts
+                # Configure client options with optimized timeouts and pooling
                 options = ClientOptions(
-                    postgrest_client_timeout=60,
-                    storage_client_timeout=60,
-                    function_client_timeout=60
+                    postgrest_client_timeout=30,  # Reduced from 60 for faster failures
+                    storage_client_timeout=30,
+                    function_client_timeout=30,
+                    # Add connection pooling settings through headers
+                    headers={
+                        "X-Client-Info": "ottomator-agents",
+                        "Connection": "keep-alive",  # Keep connections alive
+                        "Keep-Alive": "timeout=300, max=1000"  # 5 min timeout, max 1000 requests
+                    }
                 )
                 
                 # Create client with options
@@ -79,13 +100,19 @@ class SupabasePool:
                     options=options
                 )
                 
-                # Patch the client's httpx instance with better SSL handling
-                # This helps with Cloudflare SSL handshake issues
-                if hasattr(self.client, 'postgrest') and hasattr(self.client.postgrest, '_client'):
-                    # Configure the underlying httpx client if accessible
-                    pass  # The Supabase client handles this internally
+                # Configure the underlying httpx client if accessible for better pooling
+                if hasattr(self.client, 'postgrest'):
+                    # The postgrest client uses httpx internally which handles connection pooling
+                    # Set reasonable limits to prevent connection exhaustion
+                    if hasattr(self.client.postgrest, '_session'):
+                        # Update session configuration if available
+                        self.client.postgrest._session.limits = httpx.Limits(
+                            max_keepalive_connections=20,  # Pool size
+                            max_connections=100,  # Total connections
+                            keepalive_expiry=300  # 5 minutes
+                        )
                 
-                logger.info(f"Supabase client initialized ({'service role' if self.use_service_role else 'anon key'})")
+                logger.info(f"Supabase client initialized with connection pooling ({'service role' if self.use_service_role else 'anon key'})")
             except Exception as e:
                 logger.error(f"Failed to initialize Supabase client: {e}")
                 # Re-raise to allow retry logic to handle it
