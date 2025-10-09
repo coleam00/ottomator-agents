@@ -6,7 +6,7 @@ import os
 import streamlit as st
 import json
 import logfire
-from supabase import Client
+from supabase import create_client, Client
 from openai import AsyncOpenAI
 
 # Import all the message part classes
@@ -29,7 +29,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-supabase: Client = Client(
+supabase: Client = create_client(
     os.getenv("SUPABASE_URL"),
     os.getenv("SUPABASE_SERVICE_KEY")
 )
