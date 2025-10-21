@@ -18,7 +18,7 @@ from pydantic_ai.messages import (
     TextPart
 )
 
-from mcp_agent_army import get_mcp_agent_army
+from mcp_agent_army import get_mcp_agent_army, select_model_for_task, get_model
 
 # Load environment variables
 load_dotenv()
@@ -65,9 +65,12 @@ class AgentRequest(BaseModel):
     user_id: str
     request_id: str
     session_id: str
+    auto_model_selection: bool = False
 
 class AgentResponse(BaseModel):
     success: bool
+    model_used: Optional[str] = None
+    rephrased_query: Optional[str] = None
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> bool:
     """Verify the bearer token against environment variable."""
@@ -142,27 +145,58 @@ async def mcp_agent_army(
             content=request.query
         )        
 
-        # Run the agent with conversation history
+        # Variables to track model selection
+        processed_query = request.query
+        selected_model = None
+        model_selection_metadata = {}
+
+        # Apply dynamic model selection if enabled
+        if request.auto_model_selection:
+            try:
+                print(f"Applying auto model selection for session {request.session_id}")
+                selected_model, processed_query = await select_model_for_task(request.query)
+                # Update the primary agent's model
+                primary_agent.model = get_model(selected_model)
+                
+                model_selection_metadata = {
+                    "selected_model": selected_model,
+                    "original_query": request.query,
+                    "rephrased_query": processed_query
+                }
+                print(f"Selected model: {selected_model}")
+                print(f"Rephrased query: {processed_query}")
+            except Exception as e:
+                print(f"Error in model selection: {e}")
+                # Continue with original query and default model
+
+        # Run the agent with conversation history and processed query
         result = await primary_agent.run(
-            request.query,
+            processed_query,
             message_history=messages
         )
 
-        # Store agent's response
+        # Store agent's response with model selection metadata if used
+        response_data = {"request_id": request.request_id}
+        if selected_model:
+            response_data["model_selection"] = model_selection_metadata
+            
         await store_message(
             session_id=request.session_id,
             message_type="ai",
             content=result.data,
-            data={"request_id": request.request_id}
+            data=response_data
         )
 
-        # Update memories based on the last user message and agent response
-        memory_messages = [
-            {"role": "user", "content": request.query},
-            {"role": "assistant", "content": result.data}
-        ]   
+        # Reset model to default if it was changed
+        if selected_model:
+            primary_agent.model = get_model()
 
-        return AgentResponse(success=True)
+        # Return success response
+        return AgentResponse(
+            success=True,
+            model_used=selected_model,
+            rephrased_query=processed_query if selected_model else None
+        )
 
     except Exception as e:
         print(f"Error processing agent request: {str(e)}")
@@ -174,6 +208,27 @@ async def mcp_agent_army(
             data={"error": str(e), "request_id": request.request_id}
         )
         return AgentResponse(success=False)
+
+@app.post("/api/toggle-model-selection")
+async def toggle_model_selection(
+    session_id: str,
+    enable: bool,
+    authenticated: bool = Depends(verify_token)
+):
+    """Toggle the auto model selection feature for a session."""
+    try:
+        # Store a system message about the toggle
+        message = f"Auto model selection {'enabled' if enable else 'disabled'}"
+        await store_message(
+            session_id=session_id,
+            message_type="system",
+            content=message,
+            data={"auto_model_selection": enable}
+        )
+        
+        return {"success": True, "auto_model_selection": enable}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
