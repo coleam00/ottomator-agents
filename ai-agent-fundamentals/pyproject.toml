@@ -1,0 +1,10 @@
+[project]
+name = "simple-pydantic-agent"
+version = "0.1.0"
+description = "A simple Pydantic AI agent demonstrating fundamentals"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic-ai-slim[openai]>=0.0.14",
+    "python-dotenv>=1.0.0",
+    "langfuse>=2.0.0",
+]
