@@ -16,7 +16,7 @@ Perfect for: AI engineers, ML practitioners, and anyone building RAG systems.
 1. [Strategy Overview](#-strategy-overview)
 2. [Quick Start](#-quick-start)
 3. [Pseudocode Examples](#-pseudocode-examples)
-4. [Code Examples (Not Production)](#-code-examples-not-production)
+4. [Code Examples](#-code-examples)
 5. [Detailed Strategy Guide](#-detailed-strategy-guide)
 6. [Repository Structure](#-repository-structure)
 
@@ -26,16 +26,16 @@ Perfect for: AI engineers, ML practitioners, and anyone building RAG systems.
 
 | # | Strategy | Status | Use Case | Pros | Cons |
 |---|----------|--------|----------|------|------|
-| 1 | [Query Expansion](#1-query-expansion) | ✅ Code Example | Ambiguous queries | Better recall, multiple perspectives | Extra LLM call, higher cost |
-| 2 | [Re-ranking](#2-re-ranking) | ✅ Code Example | Precision-critical | Highly accurate results | Slower, more compute |
-| 3 | [Agentic RAG](#3-agentic-rag) | ✅ Code Example | Flexible retrieval needs | Autonomous tool selection | More complex logic |
-| 4 | [Multi-Query RAG](#4-multi-query-rag) | ✅ Code Example | Broad searches | Comprehensive coverage | Multiple API calls |
-| 5 | [Context-Aware Chunking](#5-context-aware-chunking) | ✅ Code Example | All documents | Semantic coherence | Slightly slower ingestion |
-| 6 | [Late Chunking](#6-late-chunking) | 📝 Pseudocode Only | Context preservation | Full document context | Requires long-context models |
-| 7 | [Hierarchical RAG](#7-hierarchical-rag) | 📝 Pseudocode Only | Complex documents | Precision + context | Complex setup |
-| 8 | [Contextual Retrieval](#8-contextual-retrieval) | ✅ Code Example | Critical documents | 35-49% better accuracy | High ingestion cost |
-| 9 | [Self-Reflective RAG](#9-self-reflective-rag) | ✅ Code Example | Research queries | Self-correcting | Highest latency |
-| 10 | [Knowledge Graphs](#10-knowledge-graphs) | 📝 Pseudocode Only | Relationship-heavy | Captures connections | Infrastructure overhead |
+| 1 | [Re-ranking](#1-re-ranking) | ✅ Code Example | Precision-critical | Highly accurate results | Slower, more compute |
+| 2 | [Agentic RAG](#2-agentic-rag) | ✅ Code Example | Flexible retrieval needs | Autonomous tool selection | More complex logic |
+| 3 | [Knowledge Graphs](#3-knowledge-graphs) | 📝 Pseudocode Only | Relationship-heavy | Captures connections | Infrastructure overhead |
+| 4 | [Contextual Retrieval](#4-contextual-retrieval) | ✅ Code Example | Critical documents | 35-49% better accuracy | High ingestion cost |
+| 5 | [Query Expansion](#5-query-expansion) | ✅ Code Example | Ambiguous queries | Better recall, multiple perspectives | Extra LLM call, higher cost |
+| 6 | [Multi-Query RAG](#6-multi-query-rag) | ✅ Code Example | Broad searches | Comprehensive coverage | Multiple API calls |
+| 7 | [Context-Aware Chunking](#7-context-aware-chunking) | ✅ Code Example | All documents | Semantic coherence | Slightly slower ingestion |
+| 8 | [Late Chunking](#8-late-chunking) | 📝 Pseudocode Only | Context preservation | Full document context | Requires long-context models |
+| 9 | [Hierarchical RAG](#9-hierarchical-rag) | 📝 Pseudocode Only | Complex documents | Precision + context | Complex setup |
+| 10 | [Self-Reflective RAG](#10-self-reflective-rag) | ✅ Code Example | Research queries | Self-correcting | Highest latency |
 | 11 | [Fine-tuned Embeddings](#11-fine-tuned-embeddings) | 📝 Pseudocode Only | Domain-specific | Best accuracy | Training required |
 
 ### Legend
@@ -51,7 +51,7 @@ Perfect for: AI engineers, ML practitioners, and anyone building RAG systems.
 ```bash
 cd examples
 # Browse simple, < 50 line examples for each strategy
-cat 01_query_expansion.py
+cat 01_reranking.py
 ```
 
 ### Run the Code Examples (Educational)
@@ -86,7 +86,7 @@ Each file is **< 50 lines** and demonstrates:
 - How to implement with Pydantic AI
 - Integration with PG Vector
 
-**Example** (`01_query_expansion.py`):
+**Example** (`05_query_expansion.py`):
 ```python
 from pydantic_ai import Agent
 import psycopg2
@@ -151,60 +151,19 @@ implementation/
 
 ---
 
-## 1️⃣ Query Expansion
+## 1. Re-ranking
 
 **Status**: ✅ Code Example
-**File**: `rag_agent_advanced.py` (Lines 72-107)
 
-### What It Is
-Generates multiple variations of a user query to improve retrieval recall. Takes 1 query → returns 4 queries (original + 3 LLM-generated variations).
-
-### Pros & Cons
-✅ Better recall, captures multiple perspectives
-❌ Extra LLM call adds latency and cost
-
-### Code Example
-```python
-# Lines 72-107 in rag_agent_advanced.py
-async def expand_query_variations(ctx: RunContext[None], query: str) -> List[str]:
-    """Generate multiple variations of a query for better retrieval."""
-    expansion_prompt = f"""Generate 3 different variations of this search query.
-Each variation should capture a different perspective or phrasing.
-
-Original query: {query}
-
-Return only the 3 variations, one per line."""
-
-    response = await client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": expansion_prompt}],
-        temperature=0.7
-    )
-
-    variations = response.choices[0].message.content.strip().split('\n')
-    return [query] + variations[:3]  # Original + 3 variations
-```
-
-**Used by**: Multi-Query RAG strategy
-
-**See**:
-- Full guide: [IMPLEMENTATION_GUIDE.md](implementation/IMPLEMENTATION_GUIDE.md#2-query-expansion)
-- Pseudocode: [01_query_expansion.py](examples/01_query_expansion.py)
-- Research: [docs/01-query-expansion.md](docs/01-query-expansion.md)
-
----
-
-## 2️⃣ Re-ranking
-
-**Status**: ✅ Code Example
 **File**: `rag_agent_advanced.py` (Lines 194-256)
 
 ### What It Is
-Two-stage retrieval: Fast vector search (20 candidates) → Precise cross-encoder re-ranking (top 5).
+Two-stage retrieval: Vector search (20-50+ candidates) → Reranking model to filter (top 5).
 
 ### Pros & Cons
-✅ Significantly better precision, ideal for critical queries
-❌ Slower than pure vector search, uses more compute
+✅ Significantly better precision, more knowledge considered without overwhelming LLM
+
+❌ Slightly slower than pure vector search, uses more compute
 
 ### Code Example
 ```python
@@ -230,23 +189,27 @@ async def search_with_reranking(ctx: RunContext[None], query: str, limit: int = 
 
 **See**:
 - Full guide: [IMPLEMENTATION_GUIDE.md](implementation/IMPLEMENTATION_GUIDE.md#4-re-ranking)
-- Pseudocode: [02_reranking.py](examples/02_reranking.py)
-- Research: [docs/02-reranking.md](docs/02-reranking.md)
+- Pseudocode: [01_reranking.py](examples/01_reranking.py)
+- Research: [docs/01-reranking.md](docs/01-reranking.md)
 
 ---
 
-## 3️⃣ Agentic RAG
+## 2. Agentic RAG
 
 **Status**: ✅ Code Example
+
 **Files**: `rag_agent_advanced.py` (Lines 263-354)
 
 ### What It Is
-Agent autonomously chooses between multiple retrieval tools:
-1. `search_knowledge_base()` - Semantic search over chunks
+Agent autonomously chooses between multiple retrieval tools, example:
+1. `search_knowledge_base()` - Semantic search over chunks (can include **hybrid search**: dense vector + sparse keyword/BM25)
 2. `retrieve_full_document()` - Pull entire documents when chunks aren't enough
+
+**Note**: Hybrid search (combining dense vector embeddings with sparse keyword search like BM25) is typically implemented as part of the agentic retrieval strategy, giving the agent access to both semantic similarity and keyword matching.
 
 ### Pros & Cons
 ✅ Flexible, adapts to query needs automatically
+
 ❌ More complex, less predictable behavior
 
 ### Code Example
@@ -282,117 +245,70 @@ Agent:
 
 **See**:
 - Full guide: [IMPLEMENTATION_GUIDE.md](implementation/IMPLEMENTATION_GUIDE.md#5-agentic-rag)
-- Pseudocode: [03_agentic_rag.py](examples/03_agentic_rag.py)
-- Research: [docs/03-agentic-rag.md](docs/03-agentic-rag.md)
+- Pseudocode: [02_agentic_rag.py](examples/02_agentic_rag.py)
+- Research: [docs/02-agentic-rag.md](docs/02-agentic-rag.md)
 
 ---
 
-## 4️⃣ Multi-Query RAG
+## 3. Knowledge Graphs
 
-**Status**: ✅ Code Example
-**File**: `rag_agent_advanced.py` (Lines 114-187)
+**Status**: 📝 Pseudocode Only (Graphiti)
+
+**Why not in code examples**: Requires Neo4j infrastructure, entity extraction
 
 ### What It Is
-Combines query expansion with parallel execution. Generates 4 query variations, runs all searches concurrently, deduplicates results.
+Combines vector search with graph databases (such as Neo4j/FalkorDB) to capture entity relationships.
 
 ### Pros & Cons
-✅ Comprehensive coverage, better recall on ambiguous queries
-❌ 4x database queries (though parallelized), higher cost
+✅ Captures relationships vectors miss, great for interconnected data
 
-### Code Example
+❌ Requires Neo4j setup, entity extraction, graph maintenance, slower and more expensive
+
+### Pseudocode Concept (Graphiti)
 ```python
-# Lines 114-187 in rag_agent_advanced.py
-async def search_with_multi_query(query: str, limit: int = 5) -> str:
-    """Search using multiple query variations in parallel."""
-    # Generate variations
-    queries = await expand_query_variations(query)  # Returns 4 queries
+# From 03_knowledge_graphs.py (with Graphiti)
+from graphiti_core import Graphiti
+from graphiti_core.nodes import EpisodeType
 
-    # Execute all searches in parallel
-    search_tasks = []
-    for q in queries:
-        query_embedding = await embedder.embed_query(q)
-        task = db.fetch("SELECT * FROM match_chunks($1::vector, $2)", query_embedding, limit)
-        search_tasks.append(task)
+# Initialize Graphiti (connects to Neo4j)
+graphiti = Graphiti("neo4j://localhost:7687", "neo4j", "password")
 
-    results_lists = await asyncio.gather(*search_tasks)
+async def ingest_document(text: str, source: str):
+    """Ingest document into Graphiti knowledge graph."""
+    # Graphiti automatically extracts entities and relationships
+    await graphiti.add_episode(
+        name=source,
+        episode_body=text,
+        source=EpisodeType.text,
+        source_description=f"Document: {source}"
+    )
 
-    # Deduplicate by chunk ID, keep highest similarity
-    seen = {}
-    for results in results_lists:
-        for row in results:
-            if row['chunk_id'] not in seen or row['similarity'] > seen[row['chunk_id']]['similarity']:
-                seen[row['chunk_id']] = row
+@agent.tool
+async def search_knowledge_graph(query: str) -> str:
+    """Hybrid search: semantic + keyword + graph traversal."""
+    # Graphiti combines:
+    # - Semantic similarity (embeddings)
+    # - BM25 keyword search
+    # - Graph structure traversal
+    # - Temporal context (when was this true?)
 
-    return format_results(sorted(seen.values(), key=lambda x: x['similarity'], reverse=True)[:limit])
+    results = await graphiti.search(query=query, num_results=5)
+
+    return format_graph_results(results)
 ```
 
-**Key Features**:
-- Parallel execution with `asyncio.gather()`
-- Smart deduplication (keeps best score per chunk)
+**Framework**: [Graphiti from Zep](https://github.com/getzep/graphiti) - Temporal knowledge graphs for agents
 
 **See**:
-- Full guide: [IMPLEMENTATION_GUIDE.md](implementation/IMPLEMENTATION_GUIDE.md#3-multi-query-rag)
-- Pseudocode: [04_multi_query_rag.py](examples/04_multi_query_rag.py)
-- Research: [docs/04-multi-query-rag.md](docs/04-multi-query-rag.md)
+- Pseudocode: [03_knowledge_graphs.py](examples/03_knowledge_graphs.py)
+- Research: [docs/03-knowledge-graphs.md](docs/03-knowledge-graphs.md)
 
 ---
 
-## 5️⃣ Context-Aware Chunking
-
-**Status**: ✅ Code Example (Default)
-**File**: `ingestion/chunker.py` (Lines 70-102)
-
-### What It Is
-Uses Docling's HybridChunker for intelligent document splitting that:
-- Respects document structure (headings, sections, tables)
-- Is token-aware (uses actual tokenizer, not estimates)
-- Preserves semantic coherence
-- Includes heading context in chunks
-
-### Pros & Cons
-✅ Free, fast, maintains document structure
-❌ Slightly more complex than naive chunking
-
-### Code Example
-```python
-# Lines 70-102 in chunker.py
-from docling.chunking import HybridChunker
-from transformers import AutoTokenizer
-
-class DoclingHybridChunker:
-    def __init__(self, config: ChunkingConfig):
-        # Initialize tokenizer for token-aware chunking
-        self.tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
-
-        # Create HybridChunker
-        self.chunker = HybridChunker(
-            tokenizer=self.tokenizer,
-            max_tokens=config.max_tokens,
-            merge_peers=True  # Merge small adjacent chunks
-        )
-
-    async def chunk_document(self, docling_doc: DoclingDocument) -> List[DocumentChunk]:
-        # Use HybridChunker to chunk the DoclingDocument
-        chunks = list(self.chunker.chunk(dl_doc=docling_doc))
-
-        # Contextualize each chunk (includes heading hierarchy)
-        for chunk in chunks:
-            contextualized_text = self.chunker.contextualize(chunk=chunk)
-            # Store contextualized text as chunk content
-```
-
-**Enabled by default during ingestion**
-
-**See**:
-- Full guide: [IMPLEMENTATION_GUIDE.md](implementation/IMPLEMENTATION_GUIDE.md#1-context-aware-chunking)
-- Pseudocode: [05_context_aware_chunking.py](examples/05_context_aware_chunking.py)
-- Research: [docs/05-context-aware-chunking.md](docs/05-context-aware-chunking.md)
-
----
-
-## 8️⃣ Contextual Retrieval
+## 4. Contextual Retrieval
 
 **Status**: ✅ Code Example (Optional)
+
 **File**: `ingestion/contextual_enrichment.py` (Lines 41-89)
 
 ### What It Is
@@ -400,6 +316,7 @@ Anthropic's method: Adds document-level context to each chunk before embedding. 
 
 ### Pros & Cons
 ✅ 35-49% reduction in retrieval failures, chunks are self-contained
+
 ❌ Expensive (1 LLM call per chunk), slower ingestion
 
 ### Before/After Example
@@ -446,14 +363,293 @@ Format: "This chunk from [title] discusses [explanation]." """
 
 **See**:
 - Full guide: [IMPLEMENTATION_GUIDE.md](implementation/IMPLEMENTATION_GUIDE.md#7-contextual-retrieval)
-- Pseudocode: [08_contextual_retrieval.py](examples/08_contextual_retrieval.py)
-- Research: [docs/08-contextual-retrieval.md](docs/08-contextual-retrieval.md)
+- Pseudocode: [04_contextual_retrieval.py](examples/04_contextual_retrieval.py)
+- Research: [docs/04-contextual-retrieval.md](docs/04-contextual-retrieval.md)
 
 ---
 
-## 9️⃣ Self-Reflective RAG
+## 5. Query Expansion
 
 **Status**: ✅ Code Example
+
+**File**: `rag_agent_advanced.py` (Lines 72-107)
+
+### What It Is
+Expands a single brief query into a more detailed, comprehensive version by adding context, related terms, and clarifying intent. Uses an LLM with a system prompt that describes how to enrich the query while maintaining the original intent.
+
+**Example:**
+- **Input:** "What is RAG?"
+- **Output:** "What is Retrieval-Augmented Generation (RAG), how does it combine information retrieval with language generation, what are its key components and architecture, and what advantages does it provide for question-answering systems?"
+
+### Pros & Cons
+✅ Improved retrieval precision by adding relevant context and specificity
+
+❌ Extra LLM call adds latency, may over-specify simple queries
+
+### Code Example
+```python
+# Query expansion using system prompt to guide enrichment
+async def expand_query(ctx: RunContext[None], query: str) -> str:
+    """Expand a brief query into a more detailed, comprehensive version."""
+    system_prompt = """You are a query expansion assistant. Take brief user queries and expand them into more detailed, comprehensive versions that:
+1. Add relevant context and clarifications
+2. Include related terminology and concepts
+3. Specify what aspects should be covered
+4. Maintain the original intent
+5. Keep it as a single, coherent question
+
+Expand the query to be 2-3x more detailed while staying focused."""
+
+    response = await client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Expand this query: {query}"}
+        ],
+        temperature=0.3
+    )
+
+    expanded_query = response.choices[0].message.content.strip()
+    return expanded_query  # Returns ONE enhanced query
+```
+
+**Note**: This strategy returns ONE enriched query. For generating multiple query variations, see Multi-Query RAG (Strategy 6).
+
+**See**:
+- Full guide: [IMPLEMENTATION_GUIDE.md](implementation/IMPLEMENTATION_GUIDE.md#2-query-expansion)
+- Pseudocode: [05_query_expansion.py](examples/05_query_expansion.py)
+- Research: [docs/05-query-expansion.md](docs/05-query-expansion.md)
+
+---
+
+## 6. Multi-Query RAG
+
+**Status**: ✅ Code Example
+
+**File**: `rag_agent_advanced.py` (Lines 114-187)
+
+### What It Is
+Generates multiple different query variations/perspectives with an LLM (e.g., 3-4 variations), runs all searches concurrently, and deduplicates results. Unlike Query Expansion which enriches ONE query, this creates MULTIPLE distinct phrasings to capture different angles.
+
+### Pros & Cons
+✅ Comprehensive coverage, better recall on ambiguous queries
+
+❌ 4x database queries (though parallelized), higher cost
+
+### Code Example
+```python
+# Lines 114-187 in rag_agent_advanced.py
+async def search_with_multi_query(query: str, limit: int = 5) -> str:
+    """Search using multiple query variations in parallel."""
+    # Generate variations
+    queries = await expand_query_variations(query)  # Returns 4 queries
+
+    # Execute all searches in parallel
+    search_tasks = []
+    for q in queries:
+        query_embedding = await embedder.embed_query(q)
+        task = db.fetch("SELECT * FROM match_chunks($1::vector, $2)", query_embedding, limit)
+        search_tasks.append(task)
+
+    results_lists = await asyncio.gather(*search_tasks)
+
+    # Deduplicate by chunk ID, keep highest similarity
+    seen = {}
+    for results in results_lists:
+        for row in results:
+            if row['chunk_id'] not in seen or row['similarity'] > seen[row['chunk_id']]['similarity']:
+                seen[row['chunk_id']] = row
+
+    return format_results(sorted(seen.values(), key=lambda x: x['similarity'], reverse=True)[:limit])
+```
+
+**Key Features**:
+- Parallel execution with `asyncio.gather()`
+- Smart deduplication (keeps best score per chunk)
+
+**See**:
+- Full guide: [IMPLEMENTATION_GUIDE.md](implementation/IMPLEMENTATION_GUIDE.md#3-multi-query-rag)
+- Pseudocode: [06_multi_query_rag.py](examples/06_multi_query_rag.py)
+- Research: [docs/06-multi-query-rag.md](docs/06-multi-query-rag.md)
+
+---
+
+## 7. Context-Aware Chunking
+
+**Status**: ✅ Code Example (Default)
+
+**File**: `ingestion/chunker.py` (Lines 70-102)
+
+### What It Is
+Intelligent document splitting that uses semantic similarity and document structure analysis to find natural chunk boundaries, rather than naive fixed-size splitting. This approach:
+- Analyzes document structure (headings, sections, paragraphs, tables)
+- Uses semantic analysis to identify topic boundaries
+- Respects linguistic coherence within chunks
+- Preserves hierarchical context (e.g., heading information)
+
+**Implementation Example**: Docling's HybridChunker demonstrates this strategy through:
+- Token-aware chunking (uses actual tokenizer, not estimates)
+- Document structure preservation
+- Semantic coherence
+- Heading context inclusion
+
+### Pros & Cons
+✅ Free, fast, maintains document structure
+
+❌ Slightly more complex than naive chunking
+
+### Code Example
+```python
+# Lines 70-102 in chunker.py
+from docling.chunking import HybridChunker
+from transformers import AutoTokenizer
+
+class DoclingHybridChunker:
+    def __init__(self, config: ChunkingConfig):
+        # Initialize tokenizer for token-aware chunking
+        self.tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
+
+        # Create HybridChunker
+        self.chunker = HybridChunker(
+            tokenizer=self.tokenizer,
+            max_tokens=config.max_tokens,
+            merge_peers=True  # Merge small adjacent chunks
+        )
+
+    async def chunk_document(self, docling_doc: DoclingDocument) -> List[DocumentChunk]:
+        # Use HybridChunker to chunk the DoclingDocument
+        chunks = list(self.chunker.chunk(dl_doc=docling_doc))
+
+        # Contextualize each chunk (includes heading hierarchy)
+        for chunk in chunks:
+            contextualized_text = self.chunker.contextualize(chunk=chunk)
+            # Store contextualized text as chunk content
+```
+
+**Enabled by default during ingestion**
+
+**See**:
+- Full guide: [IMPLEMENTATION_GUIDE.md](implementation/IMPLEMENTATION_GUIDE.md#1-context-aware-chunking)
+- Pseudocode: [07_context_aware_chunking.py](examples/07_context_aware_chunking.py)
+- Research: [docs/07-context-aware-chunking.md](docs/07-context-aware-chunking.md)
+
+---
+
+## 8. Late Chunking
+
+**Status**: 📝 Pseudocode Only
+
+**Why not in code examples**: Docling HybridChunker provides similar benefits
+
+### What It Is
+Embed the full document through transformer first, then chunk the token embeddings (not the text). Preserves full document context in each chunk's embedding.
+
+### Pros & Cons
+✅ Maintains full document context, leverages long-context models
+
+❌ More complex than standard chunking
+
+### Pseudocode Concept
+```python
+# From 08_late_chunking.py
+def late_chunk(text: str, chunk_size=512) -> list:
+    """Process full document through transformer BEFORE chunking."""
+    # Step 1: Embed entire document (up to 8192 tokens)
+    full_doc_token_embeddings = transformer_embed(text)  # Token-level embeddings
+
+    # Step 2: Define chunk boundaries
+    tokens = text.split()
+    chunk_boundaries = range(0, len(tokens), chunk_size)
+
+    # Step 3: Pool token embeddings for each chunk
+    chunks_with_embeddings = []
+    for start in chunk_boundaries:
+        end = start + chunk_size
+        chunk_text = ' '.join(tokens[start:end])
+
+        # Mean pool the token embeddings (preserves full doc context!)
+        chunk_embedding = mean_pool(full_doc_token_embeddings[start:end])
+        chunks_with_embeddings.append((chunk_text, chunk_embedding))
+
+    return chunks_with_embeddings
+```
+
+**Alternative**: Use Context-Aware Chunking (Docling) + Contextual Retrieval for similar benefits
+
+**See**:
+- Pseudocode: [08_late_chunking.py](examples/08_late_chunking.py)
+- Research: [docs/08-late-chunking.md](docs/08-late-chunking.md)
+
+---
+
+## 9. Hierarchical RAG
+
+**Status**: 📝 Pseudocode Only
+
+**Why not in code examples**: Agentic RAG achieves similar goals for this demo
+
+### What It Is
+Parent-child chunk relationships: Search small chunks for precision, return large parent chunks for context.
+
+**Metadata Enhancement**: Can store metadata like `section_type` ("summary", "table", "detail") and `heading_path` to intelligently decide when to return just the child vs. the parent, or to include heading context.
+
+### Pros & Cons
+✅ Balances precision (search small) with context (return big)
+
+❌ Requires parent-child database schema
+
+### Pseudocode Concept
+```python
+# From 09_hierarchical_rag.py
+def ingest_hierarchical(document: str, doc_title: str):
+    """Create parent-child chunk structure with simple metadata."""
+    parent_chunks = [document[i:i+2000] for i in range(0, len(document), 2000)]
+
+    for parent_id, parent in enumerate(parent_chunks):
+        # Store parent with metadata (section type, heading)
+        metadata = {"heading": f"{doc_title} - Section {parent_id}", "type": "detail"}
+        db.execute("INSERT INTO parent_chunks (id, content, metadata) VALUES (%s, %s, %s)",
+                   (parent_id, parent, metadata))
+
+        # Children: Small chunks with parent_id
+        child_chunks = [parent[j:j+500] for j in range(0, len(parent), 500)]
+        for child in child_chunks:
+            embedding = get_embedding(child)
+            db.execute(
+                "INSERT INTO child_chunks (content, embedding, parent_id) VALUES (%s, %s, %s)",
+                (child, embedding, parent_id)
+            )
+
+@agent.tool
+def hierarchical_search(query: str) -> str:
+    """Search children, return parents with heading context."""
+    query_emb = get_embedding(query)
+
+    # Find matching children and their parent metadata
+    results = db.query(
+        """SELECT p.content, p.metadata
+           FROM child_chunks c
+           JOIN parent_chunks p ON c.parent_id = p.id
+           ORDER BY c.embedding <=> %s LIMIT 3""",
+        query_emb
+    )
+
+    # Return parents with heading context
+    return "\n\n".join([f"[{r['metadata']['heading']}]\n{r['content']}" for r in results])
+```
+
+**Alternative**: Use Agentic RAG (semantic search + full document retrieval) for similar flexibility
+
+**See**:
+- Pseudocode: [09_hierarchical_rag.py](examples/09_hierarchical_rag.py)
+- Research: [docs/09-hierarchical-rag.md](docs/09-hierarchical-rag.md)
+
+---
+
+## 10. Self-Reflective RAG
+
+**Status**: ✅ Code Example
+
 **File**: `rag_agent_advanced.py` (Lines 361-482)
 
 ### What It Is
@@ -464,6 +660,7 @@ Self-correcting search loop:
 
 ### Pros & Cons
 ✅ Self-correcting, improves over time
+
 ❌ Highest latency (2-3 LLM calls), most expensive
 
 ### Code Example
@@ -501,175 +698,15 @@ Suggest improved query. Respond with query only."""
 
 **See**:
 - Full guide: [IMPLEMENTATION_GUIDE.md](implementation/IMPLEMENTATION_GUIDE.md#6-self-reflective-rag)
-- Pseudocode: [09_self_reflective_rag.py](examples/09_self_reflective_rag.py)
-- Research: [docs/09-self-reflective-rag.md](docs/09-self-reflective-rag.md)
+- Pseudocode: [10_self_reflective_rag.py](examples/10_self_reflective_rag.py)
+- Research: [docs/10-self-reflective-rag.md](docs/10-self-reflective-rag.md)
 
 ---
 
-### 📝 Pseudocode-Only Strategies
-
----
-
-## 6️⃣ Late Chunking
+## 11. Fine-tuned Embeddings
 
 **Status**: 📝 Pseudocode Only
-**Why not in code examples**: Docling HybridChunker provides similar benefits
 
-### What It Is
-Embed the full document through transformer first, then chunk the token embeddings (not the text). Preserves full document context in each chunk's embedding.
-
-### Pros & Cons
-✅ Maintains full document context, leverages long-context models
-❌ Requires 8K+ token models, more complex than standard chunking
-
-### Pseudocode Concept
-```python
-# From 06_late_chunking.py
-def late_chunk(text: str, chunk_size=512) -> list:
-    """Process full document through transformer BEFORE chunking."""
-    # Step 1: Embed entire document (up to 8192 tokens)
-    full_doc_token_embeddings = transformer_embed(text)  # Token-level embeddings
-
-    # Step 2: Define chunk boundaries
-    tokens = text.split()
-    chunk_boundaries = range(0, len(tokens), chunk_size)
-
-    # Step 3: Pool token embeddings for each chunk
-    chunks_with_embeddings = []
-    for start in chunk_boundaries:
-        end = start + chunk_size
-        chunk_text = ' '.join(tokens[start:end])
-
-        # Mean pool the token embeddings (preserves full doc context!)
-        chunk_embedding = mean_pool(full_doc_token_embeddings[start:end])
-        chunks_with_embeddings.append((chunk_text, chunk_embedding))
-
-    return chunks_with_embeddings
-```
-
-**Alternative**: Use Context-Aware Chunking (Docling) + Contextual Retrieval for similar benefits
-
-**See**:
-- Pseudocode: [06_late_chunking.py](examples/06_late_chunking.py)
-- Research: [docs/06-late-chunking.md](docs/06-late-chunking.md)
-
----
-
-## 7️⃣ Hierarchical RAG
-
-**Status**: 📝 Pseudocode Only
-**Why not in code examples**: Agentic RAG achieves similar goals more flexibly
-
-### What It Is
-Parent-child chunk relationships: Search small chunks for precision, but return large parent chunks for context.
-
-### Pros & Cons
-✅ Balances precision (small chunks) with context (large chunks)
-❌ Complex database schema, requires metadata management
-
-### Pseudocode Concept
-```python
-# From 07_hierarchical_rag.py
-def ingest_hierarchical(document: str):
-    """Create parent-child chunk structure."""
-    # Parent: Large sections (2000 chars)
-    parent_chunks = [document[i:i+2000] for i in range(0, len(document), 2000)]
-
-    for parent_id, parent in enumerate(parent_chunks):
-        # Store parent (not embedded)
-        db.execute("INSERT INTO parent_chunks (id, content) VALUES (%s, %s)",
-                   (parent_id, parent))
-
-        # Children: Small chunks (500 chars) from parent
-        child_chunks = [parent[j:j+500] for j in range(0, len(parent), 500)]
-        for child in child_chunks:
-            embedding = get_embedding(child)
-            # Store child with parent_id reference
-            db.execute(
-                "INSERT INTO child_chunks (content, embedding, parent_id) VALUES (%s, %s, %s)",
-                (child, embedding, parent_id)
-            )
-
-@agent.tool
-def hierarchical_search(query: str) -> str:
-    """Search children, return parents."""
-    query_emb = get_embedding(query)
-
-    # Find matching child chunks
-    parent_ids = db.query(
-        "SELECT parent_id FROM child_chunks ORDER BY embedding <=> %s LIMIT 3",
-        query_emb
-    )
-
-    # Return full parent chunks
-    parents = db.query("SELECT content FROM parent_chunks WHERE id = ANY(%s)", parent_ids)
-    return "\n\n".join(parents)
-```
-
-**Alternative**: Use Agentic RAG (semantic search + full document retrieval) for similar flexibility
-
-**See**:
-- Pseudocode: [07_hierarchical_rag.py](examples/07_hierarchical_rag.py)
-- Research: [docs/07-hierarchical-rag.md](docs/07-hierarchical-rag.md)
-
----
-
-## 🔟 Knowledge Graphs
-
-**Status**: 📝 Pseudocode Only (Graphiti)
-**Why not in code examples**: Requires Neo4j infrastructure, entity extraction
-
-### What It Is
-Combines vector search with graph database (Neo4j) to capture entity relationships. Uses **Graphiti from Zep** for temporal knowledge graphs.
-
-### Pros & Cons
-✅ Captures relationships vectors miss, great for interconnected data
-❌ Requires Neo4j setup, entity extraction, graph maintenance, slower and more expensive
-
-### Pseudocode Concept (Graphiti)
-```python
-# From 10_knowledge_graphs.py (with Graphiti)
-from graphiti_core import Graphiti
-from graphiti_core.nodes import EpisodeType
-
-# Initialize Graphiti (connects to Neo4j)
-graphiti = Graphiti("neo4j://localhost:7687", "neo4j", "password")
-
-async def ingest_document(text: str, source: str):
-    """Ingest document into Graphiti knowledge graph."""
-    # Graphiti automatically extracts entities and relationships
-    await graphiti.add_episode(
-        name=source,
-        episode_body=text,
-        source=EpisodeType.text,
-        source_description=f"Document: {source}"
-    )
-
-@agent.tool
-async def search_knowledge_graph(query: str) -> str:
-    """Hybrid search: semantic + keyword + graph traversal."""
-    # Graphiti combines:
-    # - Semantic similarity (embeddings)
-    # - BM25 keyword search
-    # - Graph structure traversal
-    # - Temporal context (when was this true?)
-
-    results = await graphiti.search(query=query, num_results=5)
-
-    return format_graph_results(results)
-```
-
-**Framework**: [Graphiti from Zep](https://github.com/getzep/graphiti) - Temporal knowledge graphs for agents
-
-**See**:
-- Pseudocode: [10_knowledge_graphs.py](examples/10_knowledge_graphs.py)
-- Research: [docs/10-knowledge-graphs.md](docs/10-knowledge-graphs.md)
-
----
-
-## 1️⃣1️⃣ Fine-tuned Embeddings
-
-**Status**: 📝 Pseudocode Only
 **Why not in code examples**: Requires domain-specific training data and infrastructure
 
 ### What It Is
@@ -677,6 +714,7 @@ Train embedding models on domain-specific query-document pairs to improve retrie
 
 ### Pros & Cons
 ✅ 5-10% accuracy gains, smaller models can outperform larger generic ones
+
 ❌ Requires training data, infrastructure, ongoing maintenance
 
 ### Pseudocode Concept
@@ -754,14 +792,14 @@ def get_embedding(text: str):
 all-rag-strategies/
 ├── README.md                           # This file
 ├── docs/                               # Detailed research (theory + use cases)
-│   ├── 01-query-expansion.md
-│   ├── 02-reranking.md
+│   ├── 01-reranking.md
+│   ├── 02-agentic-rag.md
 │   ├── ... (all 11 strategies)
 │   └── 11-fine-tuned-embeddings.md
 │
 ├── examples/                           # Simple < 50 line examples
-│   ├── 01_query_expansion.py
-│   ├── 02_reranking.py
+│   ├── 01_reranking.py
+│   ├── 02_agentic_rag.py
 │   ├── ... (all 11 strategies)
 │   ├── 11_fine_tuned_embeddings.py
 │   └── README.md
