@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with PGVector
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: rag_postgres
+    environment:
+      POSTGRES_USER: raguser
+      POSTGRES_PASSWORD: ragpass123
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raguser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RAG Voice Agent
+  rag-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag
+    container_name: rag_voice_agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://raguser:ragpass123@postgres:5432/postgres
+      LIVEKIT_URL: ${LIVEKIT_URL}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+      LOG_LEVEL: INFO
+    volumes:
+      - ./documents:/app/documents
+      - ./.env:/app/.env
+    command: ["uv", "run", "python", "rag_agent.py", "dev"]
+    restart: unless-stopped
+
+  # Optional: Document ingestion service
+  ingestion:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag
+    container_name: rag_ingestion
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://raguser:ragpass123@postgres:5432/postgres
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LLM_CHOICE: ${LLM_CHOICE:-gpt-4o-mini}
+    volumes:
+      - ./documents:/app/documents
+      - ./.env:/app/.env
+    command: ["uv", "run", "python", "ingestion/ingest.py", "--documents", "/app/documents"]
+    profiles:
+      - ingestion
+
+volumes:
+  postgres_data:

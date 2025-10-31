@@ -1,0 +1,8 @@
+.env
+.venv
+.pytest_cache
+__pycache__
+.claude
+CLAUDE.md
+ideal_documents
+PRPs

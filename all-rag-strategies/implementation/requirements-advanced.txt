@@ -1,0 +1,20 @@
+# Core RAG Agent Dependencies
+pydantic-ai>=0.0.14
+asyncpg>=0.29.0
+psycopg2-binary>=2.9.9
+pgvector>=0.3.5
+python-dotenv>=1.0.0
+
+# LLM and Embeddings
+openai>=1.54.0
+
+# Document Processing (Docling)
+docling>=2.11.1
+transformers>=4.40.0
+torch>=2.0.0
+
+# Re-ranking
+sentence-transformers>=3.3.1
+
+# Additional utilities
+pydantic>=2.0.0

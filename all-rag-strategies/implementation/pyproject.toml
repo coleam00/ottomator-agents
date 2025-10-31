@@ -1,0 +1,37 @@
+[project]
+name = "docling-rag-agent"
+version = "0.1.0"
+description = "Text-based RAG CLI agent with PostgreSQL/PGVector"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "aiohttp>=3.9.0",
+    "pydantic-ai>=0.7.4",
+    "asyncpg>=0.30.0",
+    "numpy>=2.0.2",
+    "openai>=1.0.0",
+    "docling[vlm]>=2.55.0",
+    "hf-xet>=1.1.8",
+    "openai-whisper>=20250625",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
