@@ -18,8 +18,34 @@ from configure_langfuse import configure_langfuse
 
 load_dotenv()
 
-# Configure Langfuse for agent observability
-tracer = configure_langfuse()
+# Configure Langfuse for agent observability (provide a no-op if not configured)
+try:
+    tracer = configure_langfuse()
+except Exception:
+    class _NoOpSpan:
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc, tb):
+            return False
+        def set_attribute(self, *a, **k):
+            return None
+
+    class _NoOpTracer:
+        def start_as_current_span(self, name):
+            return _NoOpSpan()
+
+    tracer = _NoOpTracer()
+
+# Read configuration for running MCP servers vs local-only
+USE_MCP_SERVERS = os.getenv("USE_MCP_SERVERS", "true").lower() in ("1", "true", "yes")
+
+
+# Helper to safely build MCP server instances only when enabled
+def build_mcp_server(command: str, args: list[str], env: dict[str, str] | None = None) -> MCPServerStdio | None:
+    if not USE_MCP_SERVERS:
+        return None
+    kwargs = {"env": env} if env is not None else {}
+    return MCPServerStdio(command, args, **kwargs)
 
 # ========== Helper function to get model configuration ==========
 def get_model():
@@ -32,42 +58,30 @@ def get_model():
 # ========== Set up MCP servers for each service ==========
 
 # Brave Search MCP server
-brave_server = MCPServerStdio(
-    'npx', ['-y', '@modelcontextprotocol/server-brave-search'],
-    env={"BRAVE_API_KEY": os.getenv("BRAVE_API_KEY")}
-)
+brave_server = build_mcp_server('npx', ['-y', '@modelcontextprotocol/server-brave-search'],
+                                {"BRAVE_API_KEY": os.getenv("BRAVE_API_KEY")})
 
 # Airtable MCP server
-airtable_server = MCPServerStdio(
-    'npx', ['-y', 'airtable-mcp-server'],
-    env={"AIRTABLE_API_KEY": os.getenv("AIRTABLE_API_KEY")}
-)
+airtable_server = build_mcp_server('npx', ['-y', 'airtable-mcp-server'],
+                                  {"AIRTABLE_API_KEY": os.getenv("AIRTABLE_API_KEY")})
 
 # Filesystem MCP server
-filesystem_server = MCPServerStdio(
-    'npx', ['-y', '@modelcontextprotocol/server-filesystem', os.getenv("LOCAL_FILE_DIR")]
-)
+filesystem_server = build_mcp_server('npx', ['-y', '@modelcontextprotocol/server-filesystem', os.getenv("LOCAL_FILE_DIR")])
 
 # GitHub MCP server
-github_server = MCPServerStdio(
-    'npx', ['-y', '@modelcontextprotocol/server-github'],
-    env={"GITHUB_PERSONAL_ACCESS_TOKEN": os.getenv("GITHUB_TOKEN")}
-)
+github_server = build_mcp_server('npx', ['-y', '@modelcontextprotocol/server-github'],
+                                {"GITHUB_PERSONAL_ACCESS_TOKEN": os.getenv("GITHUB_TOKEN")})
 
 # Slack MCP server
-slack_server = MCPServerStdio(
-    'npx', ['-y', '@modelcontextprotocol/server-slack'],
-    env={
-        "SLACK_BOT_TOKEN": os.getenv("SLACK_BOT_TOKEN"),
-        "SLACK_TEAM_ID": os.getenv("SLACK_TEAM_ID")
-    }
-)
+slack_server = build_mcp_server('npx', ['-y', '@modelcontextprotocol/server-slack'],
+                               {
+                                   "SLACK_BOT_TOKEN": os.getenv("SLACK_BOT_TOKEN"),
+                                   "SLACK_TEAM_ID": os.getenv("SLACK_TEAM_ID")
+                               })
 
 # Firecrawl MCP server
-firecrawl_server = MCPServerStdio(
-    'npx', ['-y', 'firecrawl-mcp'],
-    env={"FIRECRAWL_API_KEY": os.getenv("FIRECRAWL_API_KEY")}
-)
+firecrawl_server = build_mcp_server('npx', ['-y', 'firecrawl-mcp'],
+                                   {"FIRECRAWL_API_KEY": os.getenv("FIRECRAWL_API_KEY")})
 
 # ========== Create subagents with their MCP servers ==========
 
@@ -75,7 +89,7 @@ firecrawl_server = MCPServerStdio(
 brave_agent = Agent(
     get_model(),
     system_prompt="You are a web search specialist using Brave Search. Find relevant information on the web.",
-    mcp_servers=[brave_server],
+    mcp_servers=[s for s in (brave_server,) if s is not None],
     instrument=True
 )
 
@@ -83,7 +97,7 @@ brave_agent = Agent(
 airtable_agent = Agent(
     get_model(),
     system_prompt="You are an Airtable specialist. Help users interact with Airtable databases.",
-    mcp_servers=[airtable_server],
+    mcp_servers=[s for s in (airtable_server,) if s is not None],
     instrument=True
 )
 
@@ -91,7 +105,7 @@ airtable_agent = Agent(
 filesystem_agent = Agent(
     get_model(),
     system_prompt="You are a filesystem specialist. Help users manage their files and directories.",
-    mcp_servers=[filesystem_server],
+    mcp_servers=[s for s in (filesystem_server,) if s is not None],
     instrument=True
 )
 
@@ -99,7 +113,7 @@ filesystem_agent = Agent(
 github_agent = Agent(
     get_model(),
     system_prompt="You are a GitHub specialist. Help users interact with GitHub repositories and features.",
-    mcp_servers=[github_server],
+    mcp_servers=[s for s in (github_server,) if s is not None],
     instrument=True
 )
 
@@ -107,7 +121,7 @@ github_agent = Agent(
 slack_agent = Agent(
     get_model(),
     system_prompt="You are a Slack specialist. Help users interact with Slack workspaces and channels.",
-    mcp_servers=[slack_server],
+    mcp_servers=[s for s in (slack_server,) if s is not None],
     instrument=True
 )
 
@@ -115,7 +129,7 @@ slack_agent = Agent(
 firecrawl_agent = Agent(
     get_model(),
     system_prompt="You are a web crawling specialist. Help users extract data from websites.",
-    mcp_servers=[firecrawl_server],
+    mcp_servers=[s for s in (firecrawl_server,) if s is not None],
     instrument=True
 )
 
@@ -142,7 +156,9 @@ async def use_brave_search_agent(query: str) -> dict[str, str]:
     Returns:
         The search results or response from the Brave agent.
     """
-    print(f"Calling Brave agent with query: {query}")
+    print(f"Calling Brave agent with query: {query} - pydantic_ai_langfuse_agent.py:159")
+    if not getattr(brave_agent, "mcp_servers", []):
+        return {"error": "Brave MCP server is disabled. Set USE_MCP_SERVERS=true to enable."}
     result = await brave_agent.run(query)
     return {"result": result.data}
 
@@ -159,7 +175,9 @@ async def use_airtable_agent(query: str) -> dict[str, str]:
     Returns:
         The response from the Airtable agent.
     """
-    print(f"Calling Airtable agent with query: {query}")
+    print(f"Calling Airtable agent with query: {query} - pydantic_ai_langfuse_agent.py:176")
+    if not getattr(airtable_agent, "mcp_servers", []):
+        return {"error": "Airtable MCP server is disabled. Set USE_MCP_SERVERS=true to enable."}
     result = await airtable_agent.run(query)
     return {"result": result.data}
 
@@ -176,7 +194,9 @@ async def use_filesystem_agent(query: str) -> dict[str, str]:
     Returns:
         The response from the filesystem agent.
     """
-    print(f"Calling Filesystem agent with query: {query}")
+    print(f"Calling Filesystem agent with query: {query} - pydantic_ai_langfuse_agent.py:193")
+    if not getattr(filesystem_agent, "mcp_servers", []):
+        return {"error": "Filesystem MCP server is disabled. Set USE_MCP_SERVERS=true to enable."}
     result = await filesystem_agent.run(query)
     return {"result": result.data}
 
@@ -193,7 +213,9 @@ async def use_github_agent(query: str) -> dict[str, str]:
     Returns:
         The response from the GitHub agent.
     """
-    print(f"Calling GitHub agent with query: {query}")
+    print(f"Calling GitHub agent with query: {query} - pydantic_ai_langfuse_agent.py:210")
+    if not getattr(github_agent, "mcp_servers", []):
+        return {"error": "GitHub MCP server is disabled. Set USE_MCP_SERVERS=true to enable."}
     result = await github_agent.run(query)
     return {"result": result.data}
 
@@ -210,7 +232,9 @@ async def use_slack_agent(query: str) -> dict[str, str]:
     Returns:
         The response from the Slack agent.
     """
-    print(f"Calling Slack agent with query: {query}")
+    print(f"Calling Slack agent with query: {query} - pydantic_ai_langfuse_agent.py:227")
+    if not getattr(slack_agent, "mcp_servers", []):
+        return {"error": "Slack MCP server is disabled. Set USE_MCP_SERVERS=true to enable."}
     result = await slack_agent.run(query)
     return {"result": result.data}
 
@@ -227,7 +251,9 @@ async def use_firecrawl_agent(query: str) -> dict[str, str]:
     Returns:
         The response from the Firecrawl agent.
     """
-    print(f"Calling Firecrawl agent with query: {query}")
+    print(f"Calling Firecrawl agent with query: {query} - pydantic_ai_langfuse_agent.py:244")
+    if not getattr(firecrawl_agent, "mcp_servers", []):
+        return {"error": "Firecrawl MCP server is disabled. Set USE_MCP_SERVERS=true to enable."}
     result = await firecrawl_agent.run(query)
     return {"result": result.data}
 
@@ -235,20 +261,20 @@ async def use_firecrawl_agent(query: str) -> dict[str, str]:
 
 async def main():
     """Run the primary agent with a given query."""
-    print("MCP Agent Army - Multi-agent system using Model Context Protocol")
-    print("Enter 'exit' to quit the program.")
+    print("MCP Agent Army  Multiagent system using Model Context Protocol - pydantic_ai_langfuse_agent.py:252")
+    print("Enter 'exit' to quit the program. - pydantic_ai_langfuse_agent.py:253")
 
     # Use AsyncExitStack to manage all MCP servers in one context
     async with AsyncExitStack() as stack:
-        # Start all the subagent MCP servers
-        print("Starting MCP servers...")
-        await stack.enter_async_context(brave_agent.run_mcp_servers())
-        await stack.enter_async_context(airtable_agent.run_mcp_servers())
-        await stack.enter_async_context(filesystem_agent.run_mcp_servers())
-        await stack.enter_async_context(github_agent.run_mcp_servers())
-        await stack.enter_async_context(slack_agent.run_mcp_servers())
-        await stack.enter_async_context(firecrawl_agent.run_mcp_servers())
-        print("All MCP servers started successfully!")
+        # Start MCP servers only when enabled and configured
+        if USE_MCP_SERVERS:
+            print("Starting MCP servers... - pydantic_ai_langfuse_agent.py:258")
+            for agent in (brave_agent, airtable_agent, filesystem_agent, github_agent, slack_agent, firecrawl_agent):
+                if getattr(agent, "mcp_servers", None):
+                    await stack.enter_async_context(agent.run_mcp_servers())
+            print("All configured MCP servers started successfully! - pydantic_ai_langfuse_agent.py:265")
+        else:
+            print("MCP servers disabled (local-only mode). Running without external MCP servers.")
 
         console = Console()
         messages = []        
@@ -259,7 +285,7 @@ async def main():
             
             # Check if user wants to exit
             if user_input.lower() in ['exit', 'quit', 'bye', 'goodbye']:
-                print("Goodbye!")
+                print("Goodbye! - pydantic_ai_langfuse_agent.py:276")
                 break
             
             try:
@@ -269,7 +295,7 @@ async def main():
                     span.set_attribute("langfuse.session.id", "987654321")
 
                     # Process the user input and output the response
-                    print("\n[Assistant]")
+                    print("\n[Assistant] - pydantic_ai_langfuse_agent.py:286")
                     curr_message = ""
                     with Live('', console=console, vertical_overflow='visible') as live:
                         async with primary_agent.run_stream(
@@ -286,7 +312,7 @@ async def main():
                     span.set_attribute("output.value", curr_message)
                 
             except Exception as e:
-                print(f"\n[Error] An error occurred: {str(e)}")
+                print(f"\n[Error] An error occurred: {str(e)} - pydantic_ai_langfuse_agent.py:303")
 
 if __name__ == "__main__":
     asyncio.run(main())

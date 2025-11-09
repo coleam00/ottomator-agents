@@ -49,6 +49,14 @@ The main agent system uses a primary orchestration agent that delegates tasks to
    ```
 4. Create a `.env` file based on the environment variables listed below
 
+Note: a `.env.example` file is already included in this folder. Copy it to `.env` and adjust values.
+
+To run securely and fully-local (no MCP servers), set:
+
+```
+USE_MCP_SERVERS=false
+```
+
 ## Langfuse Setup
 
 Langfuse provides observability for your AI agents. You can either use Langfuse Cloud (managed service) or self-host Langfuse.
