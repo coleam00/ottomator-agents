@@ -1,0 +1,78 @@
+Meeting Notes
+Date: July 22, 2024
+Time: 3:00 PM - 4:30 PM
+Location: Conference Room E, Gaming HQ
+
+Attendees:
+
+Alex Thompson (CEO)
+Maria Rodriguez (CTO)
+Jamie Lee (Lead Game Designer)
+Sam Patel (Marketing Director)
+Chris Martin (Project Manager)
+Tina Nguyen (Lead Programmer)
+Emily Carter (HR Manager)
+Michael Harris (QA Lead)
+Laura Bennett (Finance Manager)
+David King (Art Director)
+Agenda:
+
+Review of Previous Action Items
+Art and Design Updates
+Server Stress Test Preparation
+Marketing Metrics and Adjustments
+Focus Group Planning for "Cyber Warriors"
+AOB (Any Other Business)
+1. Review of Previous Action Items:
+
+Sarah Walker: Implementing the chatbot has begun, with an expected rollout in two weeks.
+Chris Martin: Final preparations for "Space Rangers" beta are on track, with beta access codes ready to be distributed.
+Jamie Lee: Scheduled focus groups for "Cyber Warriors" to begin next week.
+Emily Carter: Onboarding process for new hires has been finalized, with mentors assigned.
+2. Art and Design Updates:
+
+David King: Presented updates on art and design:
+New character models for "Cyber Warriors" are 50% complete.
+Concept art for the "Mystic Adventures" expansion pack has been finalized and is ready for review.
+Feedback:
+Jamie Lee: Suggested incorporating more diverse character designs to appeal to a broader audience.
+Maria Rodriguez: Recommended scheduling regular review sessions to ensure art and design align with the overall vision of the games.
+3. Server Stress Test Preparation:
+
+Tina Nguyen: Outlined the plan for the server stress test:
+Scheduled for Monday, July 24, 2024.
+Will simulate peak user loads to identify potential issues.
+QA team will monitor performance and log any anomalies.
+Discussion:
+Michael Harris: Confirmed QA team is prepared and ready to support the stress test.
+Alex Thompson: Emphasized the importance of ensuring server stability before the beta launch.
+4. Marketing Metrics and Adjustments:
+
+Sam Patel: Shared metrics from the current marketing campaign:
+Teaser trailers for "Space Rangers" have received high engagement.
+Social media interactions have increased by 30% since the campaign launch.
+Feedback:
+Laura Bennett: Suggested reallocating part of the budget towards more targeted ads to maximize reach.
+Sam Patel: Agreed and proposed additional influencer partnerships to maintain momentum.
+5. Focus Group Planning for "Cyber Warriors":
+
+Jamie Lee: Provided details on the focus groups:
+First session scheduled for July 28, 2024.
+Participants selected from a diverse demographic to gather comprehensive feedback.
+Focus will be on storyline, gameplay mechanics, and character customization.
+Discussion:
+Chris Martin: Suggested recording the sessions for detailed analysis and future reference.
+Maria Rodriguez: Recommended involving the UX/UI team to gain insights on user experience.
+6. AOB (Any Other Business):
+
+Alex Thompson: Announced that the Berlin office is now fully operational, with a team ready to support European operations.
+Emily Carter: Proposed a wellness program for employees, including yoga sessions and mental health resources.
+Next Meeting: Scheduled for August 8, 2024.
+Action Items:
+
+David King: Finalize character models and concept art, and schedule regular review sessions.
+Tina Nguyen: Execute the server stress test and report findings.
+Sam Patel: Adjust marketing strategy based on metrics and explore additional influencer partnerships.
+Jamie Lee: Conduct focus groups for "Cyber Warriors" and ensure UX/UI team involvement.
+Emily Carter: Implement the wellness program and promote it among employees.
+Meeting Adjourned at 4:30 PM.

@@ -1,0 +1,11 @@
+python-dotenv==0.13.0
+langchain==0.2.12
+langchain-anthropic==0.1.22
+langchain-community==0.2.11
+langchain-core==0.2.28
+langchain-openai==0.1.20
+langchain-chroma==0.1.2
+langchain-huggingface==0.0.3
+streamlit==1.36.0
+pdfminer.six==20240706
+unstructured[all-docs]

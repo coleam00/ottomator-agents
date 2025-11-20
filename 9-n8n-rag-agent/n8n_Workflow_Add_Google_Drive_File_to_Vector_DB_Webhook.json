@@ -1,0 +1,73 @@
+{
+  "name": "Add Google Drive File to Vector DB Webhook",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "62e355b9-f29e-4542-bc69-0862451611b5",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.yoururl.com/webhook/add_doc_to_vector_db",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.query.query }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "41af8ec1-258f-43dd-82ad-be28b323d83b",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "FWbnHWdNKFyEHa1W",
+          "name": "Header Auth account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a117a9b8-1c53-4548-b9cd-1f776f61b798",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "620f0d7e3114cb344761d7d45a21ef2a32096f91d8696e7057756042e1999e2c"
+  },
+  "id": "VYQ5kVPM57CJavof",
+  "tags": []
+}

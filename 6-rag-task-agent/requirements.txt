@@ -1,0 +1,11 @@
+asana==5.0.7
+python-dotenv==0.13.0
+langchain==0.2.6
+langchain-anthropic==0.1.16
+langchain-community==0.2.6
+langchain-core==0.2.10
+langchain-openai==0.1.10
+langchain-chroma==0.1.2
+streamlit==1.36.0
+pdfminer.six==20240706
+unstructured[all-docs]

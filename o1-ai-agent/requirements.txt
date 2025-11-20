@@ -1,0 +1,6 @@
+asana==5.0.0
+python-dotenv==0.13.0
+langchain==0.2.6
+langchain-openai==0.1.10
+langchain-core==0.2.10
+streamlit==1.36.0

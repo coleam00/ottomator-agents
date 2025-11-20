@@ -1,0 +1,10 @@
+# When installing langchain-huggingface on Windows, you might need to follow these instructions:
+# https://www.howtogeek.com/266621/how-to-make-windows-10-accept-file-paths-over-260-characters/
+
+asana==5.0.0
+python-dotenv==0.13.0
+langchain==0.2.6
+langchain-community==0.2.6
+langchain-huggingface==0.0.3
+langchain-core==0.2.10
+streamlit==1.36.0

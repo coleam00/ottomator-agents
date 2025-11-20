@@ -1,0 +1,8 @@
+{
+  "name": "get_postgres_tables",
+  "description": "Use this tool to get the Postgres table.",
+  "color": "linear-gradient(rgb(233,65,152), rgb(71,142,232))",
+  "iconSrc": "",
+  "schema": "[{\"id\":0,\"property\":\"database\",\"description\":\"the database name\",\"type\":\"string\",\"required\":true}]",
+  "func": "/*\n* You can use any libraries imported in Flowise\n* You can use properties specified in Input Schema as variables. Ex: Property = userid, Variable = $userid\n* You can get default flow config: $flow.sessionId, $flow.chatId, $flow.chatflowId, $flow.input, $flow.state\n* You can get custom variables: $vars.<variable-name>\n* Must return a string value at the end of function\n*/\n\nconst fetch = require('node-fetch');\nconst url = 'http://n8n:5678/webhook/d8db9fa3-04fe-43c8-9acf-e1912463477f';\nconst options = {\n    method: 'GET',\n    headers: {\n        'Content-Type': 'application/json',\n        'Authorization': `Bearer ${$vars.headerauth}`\n    }\n};\ntry {\n    const response = await fetch(url, options);\n    const text = await response.text();\n    return text;\n} catch (error) {\n    console.error(error);\n    return '';\n}"
+}

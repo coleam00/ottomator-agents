@@ -1,0 +1,3 @@
+asana==5.0.0
+openai==1.10.0
+python-dotenv==0.13.0

@@ -1,0 +1,11 @@
+# robots.txt for Live Agent Studio
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://miiwins.github.io/ottomator-agents/sitemap.xml
+
+# Disallow admin/hidden directories if any
+# Disallow: /admin/
+# Disallow: /.git/

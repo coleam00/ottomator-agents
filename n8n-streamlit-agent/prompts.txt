@@ -1,0 +1,19 @@
+Basic Streamlit + n8n Agent App without Authentication:
+
+```
+Create a basic Streamlit application with a chat interface to talk to an LLM. When a user enters a message, it is sent through a webhook with a hard coded bearer token to an n8n workflow that handles the user input and gives a response from the LLM.
+
+The payload for the POST request includes the sessionId for a randomly generated session ID you need to create, and chatInput which contains the user message. The response JSON has just a single key, output, which is the response from the LLM to display back to the user.
+```
+
+Streamlit App with Supabase Authentication:
+
+```
+Now update this Streamlit app to use Supabase for authentication. Have a tab for logging in and a tab for signing up when a user first enters the app.
+
+Use the user's Supabase token when authenticated as the bearer token for the webhook request to the n8n workflow.
+
+Have a left-side panel to display the user email and session ID.
+
+Do NOT include experimental Streamlit features to do things like refresh the page.
+```

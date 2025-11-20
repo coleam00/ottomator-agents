@@ -1,0 +1,130 @@
+{
+  "name": "Get Postgres Tables",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "74a8e48c-c13f-450c-835e-1702d87f894c",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT table_name \nFROM information_schema.tables\nWHERE table_schema = 'public'\n    AND table_type = 'BASE TABLE'\nORDER BY table_name;",
+        "options": {}
+      },
+      "id": "2cd15801-ea79-4a53-b1be-c0470429966a",
+      "name": "Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        400,
+        60
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "AXJoQJaFRsoL9Qk8",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "concatenate",
+              "field": "table_name"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8b66e814-e553-451c-818a-fc93699b341c",
+      "name": "Summarize",
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1,
+      "position": [
+        640,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "path": "d8db9fa3-04fe-43c8-9acf-e1912463477f",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3eb54a82-034c-4f3f-aa99-3b6aeb744ce2",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        60
+      ],
+      "webhookId": "d8db9fa3-04fe-43c8-9acf-e1912463477f",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "upxO7NGaOTeIP4XU",
+          "name": "testauth"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Postgres": {
+      "main": [
+        [
+          {
+            "node": "Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "bd8d96b6-53e1-4cb9-8ee7-0c8be9b86dc9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "73cb7a3e883df514bb47e8d1b34526d30e2abb8f56cd99f10d5948a1e11b25aa"
+  },
+  "id": "t15NIcuhUMXOE8DM",
+  "tags": []
+}

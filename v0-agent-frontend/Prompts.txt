@@ -1,0 +1,21 @@
+Prompt 1:
+
+Create a full chatbot page where the chat will automatically scroll up as the conversation continues like a chat you'd have in FB messenger, Discord, Slack, etc. Every time the user enters a message, just respond with "placeholder message" after thinking for a couple of seconds.
+
+Prompt 2:
+
+Now change the chatbot so I can talk to my AI Agent through a webhook and still have the chat automatically scroll up as the conversation continues like a chat you'd have in FB messenger, Discord, Slack, etc.
+
+The webhook to invoke for the AI Agent is:
+
+[your webhook endpoint]
+
+Include an authorization header with the authorization [your bearer token, this is optional if you turn it off in n8n]. The payload needs to include "sessionId" and "chatInput". Randomly generate a string for the sessionId and the chatInput is the user input in the frontend. The webhook will respond with a single object "output" in the JSON to display back to the user as the agent's response.
+
+Prompt 3:
+
+Parse the AI responses as Markdown so they look nice. Also make the UI a dark theme and have a navigation header with a bottom shadow. Have a couple of icons for navigation on the left and the title on the right. Also include a side bar on the left with some example conversations like you would see on chatgpt.com.
+
+Prompt 4:
+
+Add Supabase authentication into this component so someone has to sign in to get access to the chatbot and then the session ID can be the Supabase user ID.

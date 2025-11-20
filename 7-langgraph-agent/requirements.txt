@@ -1,0 +1,10 @@
+asana==5.0.7
+python-dotenv==0.13.0
+langchain==0.2.12
+langchain-anthropic==0.1.22
+langchain-community==0.2.11
+langchain-core==0.2.28
+langchain-openai==0.1.20
+streamlit==1.36.0
+langgraph==0.1.19
+aiosqlite==0.20.0

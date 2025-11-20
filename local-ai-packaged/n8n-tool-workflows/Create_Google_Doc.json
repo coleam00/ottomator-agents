@@ -1,0 +1,114 @@
+{
+  "name": "Create Google Doc",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "createFromText",
+        "content": "={{ $json.body.document_text }}",
+        "name": "={{ $json.body.document_title }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1914m3M7kRzkd5RJqAfzRY9EBcJrKemZC",
+          "mode": "list",
+          "cachedResultName": "Meeting Notes",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1914m3M7kRzkd5RJqAfzRY9EBcJrKemZC"
+        },
+        "options": {
+          "convertToGoogleDocument": true
+        }
+      },
+      "id": "abb2ee3f-7dd0-4d6e-96f0-6cc91eb64a5e",
+      "name": "Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1040,
+        360
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "cfNochbuJikPwwl2",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "9904e7b7-c9f6-49b5-ab72-6b199c6e2f46",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1260,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "d8db9fa3-04fe-43c8-9acf-e1912463477f",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7e761bed-99f6-4a8a-959b-d1b3542b6071",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        820,
+        360
+      ],
+      "webhookId": "d8db9fa3-04fe-43c8-9acf-e1912463477f",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PGr0hc0kn43Di1sz",
+          "name": "testauth"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c1f66b1c-c7dc-48ba-9197-6a0e3ac3e8f4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "620f0d7e3114cb344761d7d45a21ef2a32096f91d8696e7057756042e1999e2c"
+  },
+  "id": "LYrReDbpmqK3eX2P",
+  "tags": []
+}

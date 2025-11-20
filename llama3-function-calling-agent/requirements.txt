@@ -1,0 +1,7 @@
+asana==5.0.7
+python-dotenv==0.13.0
+langchain==0.2.6
+langchain-groq==0.1.5
+langchain-community==0.2.6
+langchain-core==0.2.10
+streamlit==1.36.0

@@ -1,0 +1,8 @@
+{
+  "name": "create_google_doc",
+  "description": "Use this tool to create a Google Doc.",
+  "color": "linear-gradient(rgb(148,138,24), rgb(211,202,27))",
+  "iconSrc": "",
+  "schema": "[{\"id\":0,\"property\":\"document_text\",\"description\":\"The text to put in the Google Doc\",\"type\":\"string\",\"required\":true},{\"id\":1,\"property\":\"document_title\",\"description\":\"The title for the document\",\"type\":\"string\",\"required\":true}]",
+  "func": "/*\n* You can use any libraries imported in Flowise\n* You can use properties specified in Input Schema as variables. Ex: Property = userid, Variable = $userid\n* You can get default flow config: $flow.sessionId, $flow.chatId, $flow.chatflowId, $flow.input, $flow.state\n* You can get custom variables: $vars.<variable-name>\n* Must return a string value at the end of function\n*/\n\nconst fetch = require('node-fetch');\nconst url = 'Your n8n Webhook URL';\nconst options = {\n    method: 'POST',\n    headers: {\n        'Content-Type': 'application/json',\n        'Authorization': `Bearer ${$vars.headerauth}`\n    },\n    body: JSON.stringify({\n      'document_title': $document_title,\n      'document_text': $document_text\n    })\n};\ntry {\n    const response = await fetch(url, options);\n    const text = await response.text();\n    return text;\n} catch (error) {\n    console.error(error);\n    return '';\n}"
+}

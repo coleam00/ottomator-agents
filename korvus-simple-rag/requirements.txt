@@ -1,0 +1,4 @@
+korvus==1.1.2
+asyncio==3.4.3
+python-dotenv==0.13.0
+datasets==3.0.0

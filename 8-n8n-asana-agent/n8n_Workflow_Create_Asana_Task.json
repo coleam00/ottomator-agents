@@ -1,0 +1,68 @@
+{
+  "name": "Create Asana Task",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f7d7e146-3f88-4701-87ab-1aa09df7a83d",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        820,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "workspace": "1207638003439377",
+        "name": "={{ $json.query.name }}",
+        "otherProperties": {
+          "due_on": "={{ $json.query.due_date }}T00:00:00",
+          "projects": [
+            "1207790694984047"
+          ]
+        }
+      },
+      "id": "163fab0b-947d-4b62-b17f-b6a420a10104",
+      "name": "Asana",
+      "type": "n8n-nodes-base.asana",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        360
+      ],
+      "alwaysOutputData": false,
+      "credentials": {
+        "asanaApi": {
+          "id": "3SVncDjuaKuQ7AQo",
+          "name": "Asana account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Asana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2295c979-5624-47bf-89d6-5d784e3c9a6e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "620f0d7e3114cb344761d7d45a21ef2a32096f91d8696e7057756042e1999e2c"
+  },
+  "id": "nCnW5wOp1qjTpOvp",
+  "tags": []
+}

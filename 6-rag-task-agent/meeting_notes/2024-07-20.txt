@@ -1,0 +1,71 @@
+Meeting Notes
+Date: July 20, 2024
+Time: 11:00 AM - 12:30 PM
+Location: Conference Room C, Gaming HQ
+
+Attendees:
+
+Alex Thompson (CEO)
+Maria Rodriguez (CTO)
+Jamie Lee (Lead Game Designer)
+Sam Patel (Marketing Director)
+Chris Martin (Project Manager)
+Tina Nguyen (Lead Programmer)
+Emily Carter (HR Manager)
+Michael Harris (QA Lead)
+Laura Bennett (Finance Manager)
+Agenda:
+
+Financial Review and Budget Allocation
+Progress Update on Technical Issues
+Marketing Campaign for Upcoming Beta
+Team Building and Morale Boosting Initiatives
+Community Event Planning
+AOB (Any Other Business)
+1. Financial Review and Budget Allocation:
+
+Laura Bennett: Presented the financial report for Q2:
+Revenue exceeded projections by 15% due to the success of "Dragon's Quest."
+Proposed budget allocation for the next quarter, prioritizing new hires, marketing campaigns, and technical upgrades.
+Discussion: Team agreed to allocate additional funds towards the marketing campaign for the "Space Rangers" beta and the development of "Cyber Warriors."
+2. Progress Update on Technical Issues:
+
+Tina Nguyen: Provided an update on the technical issues:
+Memory leak problems in "Space Rangers" have been resolved.
+Server stability has improved, with a new load-balancing system implemented.
+Feedback:
+Maria Rodriguez: Suggested conducting a stress test next week to ensure server robustness before the beta release.
+Michael Harris: Confirmed that QA will schedule and oversee the stress test.
+3. Marketing Campaign for Upcoming Beta:
+
+Sam Patel: Detailed the marketing campaign strategy for the "Space Rangers" beta:
+Teaser trailers and gameplay videos to be released over the next two weeks.
+Social media countdown to the beta launch, with daily posts and interactive content.
+Collaboration with influencers to generate hype and attract beta testers.
+Discussion: Team brainstormed additional promotional activities, such as a beta launch livestream and exclusive in-game rewards for beta participants.
+4. Team Building and Morale Boosting Initiatives:
+
+Emily Carter: Presented proposals for boosting team morale:
+Scheduled a team-building retreat for the first week of August.
+Implementing flexible working hours starting next week.
+Organizing monthly social events to foster a positive work environment.
+Feedback:
+Alex Thompson: Emphasized the importance of maintaining a healthy work-life balance and encouraged team members to take advantage of the new initiatives.
+5. Community Event Planning:
+
+Jamie Lee: Discussed plans for the community event:
+Proposed an in-game tournament with prizes for the top players.
+Suggested holding a live Q&A session with the development team to engage with the community directly.
+Sam Patel: Agreed to coordinate the event and manage logistics, with a tentative date set for mid-August.
+6. AOB (Any Other Business):
+
+Alex Thompson: Reminded everyone to submit their presentation proposals for the industry conference by the end of the month.
+Laura Bennett: Announced the approval of the budget for the new office in Berlin, with plans to start operations in September.
+Next Meeting: Scheduled for August 5, 2024.
+Action Items:
+
+Laura Bennett: Finalize budget allocations and distribute funds as agreed.
+Tina Nguyen: Conduct a stress test for the "Space Rangers" servers next week and report results.
+Sam Patel: Implement the marketing campaign for the beta and coordinate the community event.
+Emily Carter: Organize the team-building retreat and implement flexible working hours policy.
+Meeting Adjourned at 12:30 PM.

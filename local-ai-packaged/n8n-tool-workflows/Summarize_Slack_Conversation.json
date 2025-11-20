@@ -1,0 +1,193 @@
+{
+  "name": "Summarize Slack Conversation",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "channel",
+        "operation": "history",
+        "channelId": {
+          "__rl": true,
+          "value": "C083QQBQTAM",
+          "mode": "list",
+          "cachedResultName": "flowise-n8n"
+        },
+        "limit": 10,
+        "filters": {}
+      },
+      "id": "d572a7b3-311e-4864-a604-11d679ecc855",
+      "name": "Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        360
+      ],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "XtpcBxLD5axuhMm8",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c30ce367-cb19-4ef9-b8e7-0e03982960f6",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1840,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fdb91643-0f0f-4ad5-b333-2294029f0ae7",
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1260,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "bf2c887e-bb34-44fc-89ea-fad409db0317",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        1480,
+        580
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "JJjD91oisPv9cs01",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Summarize the following conversation, outputting just the summary and nothing else - no preabmle or explanation. \n\nKeep in mind the latest message is the first in the list: \n\n{{ $json.text }}"
+      },
+      "id": "90984360-3628-494d-a077-08ec69fd88e5",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        1480,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "path": "66a5755c-5030-4a6b-9b5e-2e09a21456d6",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "930860ba-d339-4668-a13c-4e2277308161",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        820,
+        360
+      ],
+      "webhookId": "66a5755c-5030-4a6b-9b5e-2e09a21456d6",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PGr0hc0kn43Di1sz",
+          "name": "testauth"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Slack": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "039f8fd7-6a15-4070-81ae-1f2851183c86",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "620f0d7e3114cb344761d7d45a21ef2a32096f91d8696e7057756042e1999e2c"
+  },
+  "id": "vchuPxsgQU32o0v1",
+  "tags": []
+}
