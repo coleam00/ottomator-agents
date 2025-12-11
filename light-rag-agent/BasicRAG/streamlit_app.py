@@ -22,6 +22,9 @@ from utils import get_chroma_client
 
 load_dotenv()
 
+# Set a global event loop
+asyncio.set_event_loop(asyncio.new_event_loop())
+
 async def get_agent_deps():
     """
     Creates a LightRAG instance
@@ -108,4 +111,9 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        import asyncio as _asyncio
+        _asyncio.ensure_future(main())
+    else:
+        loop.run_until_complete(main())
