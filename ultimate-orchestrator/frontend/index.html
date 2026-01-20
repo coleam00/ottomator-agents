@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate AI Orchestrator - 70+ AI Agents</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="background">
+        <canvas id="particles"></canvas>
+        <div class="gradient-orbs">
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            <div class="orb orb-3"></div>
+        </div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-circle">
+                    <svg viewBox="0 0 100 100" class="logo-svg">
+                        <circle cx="50" cy="50" r="45" class="logo-ring"/>
+                        <circle cx="50" cy="50" r="35" class="logo-ring-2"/>
+                        <circle cx="50" cy="50" r="25" class="logo-core"/>
+                        <path d="M 50 25 L 50 75 M 25 50 L 75 50" class="logo-cross"/>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>ULTIMATE ORCHESTRATOR</h1>
+                    <p class="subtitle">70+ AI Agents • Voice-Enabled • Real-Time</p>
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-dot status-online"></span>
+                    <span class="status-label">System Online</span>
+                </div>
+                <div class="status-item">
+                    <span class="agent-count">70+</span>
+                    <span class="status-label">Agents Active</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Voice Interface Card -->
+        <div class="card voice-card">
+            <div class="card-header">
+                <h2>🎙️ Voice Interface</h2>
+                <div class="voice-status" id="voiceStatus">
+                    <span class="status-dot"></span>
+                    <span>Ready</span>
+                </div>
+            </div>
+
+            <!-- Voice Visualizer -->
+            <div class="voice-visualizer">
+                <canvas id="voiceCanvas"></canvas>
+                <div class="voice-center">
+                    <button class="voice-button" id="voiceButton">
+                        <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                        <span class="voice-text">ACTIVATE VOICE</span>
+                    </button>
+                    <div class="pulse-ring"></div>
+                    <div class="pulse-ring pulse-ring-delay"></div>
+                </div>
+                <div class="waveform">
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                </div>
+            </div>
+
+            <!-- Voice Transcript -->
+            <div class="transcript" id="transcript">
+                <div class="transcript-header">
+                    <span>Conversation</span>
+                    <button class="clear-btn" id="clearTranscript">Clear</button>
+                </div>
+                <div class="messages" id="messages">
+                    <div class="message system">
+                        <span class="message-icon">🤖</span>
+                        <span>Say "Hello" to activate voice mode and start talking to 70+ AI agents</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Grid -->
+        <div class="card agents-card">
+            <div class="card-header">
+                <h2>🤖 Available Agents</h2>
+                <input type="text" class="agent-search" placeholder="Search agents..." id="agentSearch">
+            </div>
+
+            <div class="agent-grid" id="agentGrid">
+                <!-- Agents will be loaded dynamically -->
+            </div>
+        </div>
+
+        <!-- Stats Dashboard -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-value" id="requestCount">0</div>
+                <div class="stat-label">Requests Processed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-value" id="activeAgents">70+</div>
+                <div class="stat-label">Active Agents</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-value" id="avgResponse">0.8s</div>
+                <div class="stat-label">Avg Response Time</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-value" id="uptime">99.9%</div>
+                <div class="stat-label">System Uptime</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="action-btn" onclick="openDocs()">
+                📚 Documentation
+            </button>
+            <button class="action-btn" onclick="openAPI()">
+                🔌 API Explorer
+            </button>
+            <button class="action-btn" onclick="openMonitoring()">
+                📊 Monitoring
+            </button>
+            <button class="action-btn" onclick="openSettings()">
+                ⚙️ Settings
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="loading-text">Initializing AI Orchestrator...</div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+    <script src="particles.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

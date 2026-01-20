@@ -1,0 +1,60 @@
+# Ultimate Orchestrator System Requirements
+# =============================================
+
+# Core AI Framework
+pydantic-ai>=0.0.15
+pydantic>=2.0.0
+
+# LLM Providers
+openai>=1.12.0
+anthropic>=0.21.0
+
+# Web Framework & API
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9
+httpx>=0.26.0
+
+# Database Clients
+supabase>=2.3.0
+mysql-connector-python>=8.0.0
+qdrant-client>=1.7.0
+psycopg2-binary>=2.9.0
+
+# Voice Capabilities
+livekit-agents[mcp]>=1.2.0
+livekit-plugins-openai>=1.0.0
+livekit-plugins-deepgram>=1.0.0
+livekit-plugins-silero>=1.0.0
+livekit-plugins-turn-detector>=1.0.0
+
+# Utility Libraries
+python-dotenv>=1.0.0
+rich>=13.0.0
+aiofiles>=23.0.0
+paramiko>=3.4.0
+websockets>=12.0
+
+# Monitoring & Observability
+langfuse>=2.0.0
+prometheus-client>=0.19.0
+
+# Optional: Additional Voice Providers
+# livekit-plugins-elevenlabs>=1.0.0  # Uncomment if using ElevenLabs
+# livekit-plugins-cartesia>=1.0.0     # Uncomment if using Cartesia
+
+# Optional: Additional Database Support
+# pymongo>=4.0.0           # Uncomment if using MongoDB
+# pinecone-client>=3.0.0   # Uncomment if using Pinecone
+# chromadb>=0.4.0          # Uncomment if using ChromaDB
+
+# Optional: Additional Features
+# streamlit>=1.31.0        # Uncomment if building Streamlit UI
+# redis>=5.0.0             # Uncomment for Redis caching
+
+# Development Dependencies (Uncomment for development)
+# pytest>=8.0.0
+# pytest-asyncio>=0.23.0
+# black>=24.0.0
+# mypy>=1.8.0
+# ruff>=0.2.0

@@ -1,0 +1,89 @@
+# Render.com Deployment Configuration
+# This file tells Render how to deploy your Ultimate Orchestrator
+
+services:
+  # Main API Service
+  - type: web
+    name: ultimate-orchestrator
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SERVER_HOST
+        value: 0.0.0.0
+      - key: SERVER_PORT
+        value: 8000
+      - key: WORKERS
+        value: 4
+
+      # LLM Providers
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: openai
+      - key: MODEL_CHOICE
+        value: gpt-4o
+
+      # Database
+      - key: DB_PROVIDER
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+
+      # Qdrant
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+
+      # Voice
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: STT_PROVIDER
+        value: deepgram
+      - key: TTS_PROVIDER
+        value: openai
+
+      # MCP
+      - key: MCP_ENABLED
+        value: true
+      - key: GITHUB_TOKEN
+        sync: false
+
+      # Monitoring
+      - key: MONITORING_ENABLED
+        value: true
+
+    healthCheckPath: /health
+
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetMemoryPercent: 80
+      targetCPUPercent: 80
+
+  # Redis Service
+  - type: redis
+    name: orchestrator-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+# Databases (if using Render's Postgres instead of Supabase)
+# databases:
+#   - name: orchestrator-db
+#     plan: starter
