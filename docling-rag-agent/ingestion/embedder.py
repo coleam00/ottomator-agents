@@ -60,14 +60,21 @@ class EmbeddingGenerator:
         
         # Model-specific configurations
         self.model_configs = {
+            # OpenAI models
             "text-embedding-3-small": {"dimensions": 1536, "max_tokens": 8191},
             "text-embedding-3-large": {"dimensions": 3072, "max_tokens": 8191},
-            "text-embedding-ada-002": {"dimensions": 1536, "max_tokens": 8191}
+            "text-embedding-ada-002": {"dimensions": 1536, "max_tokens": 8191},
+            # Ollama models
+            "nomic-embed-text": {"dimensions": 768, "max_tokens": 8192},
+            "mxbai-embed-large": {"dimensions": 1024, "max_tokens": 512},
+            "all-minilm": {"dimensions": 384, "max_tokens": 512},
+            "bge-m3": {"dimensions": 1024, "max_tokens": 8192},
+            "qwen3-embedding": {"dimensions": 4096, "max_tokens": 8192},
         }
-        
+
         if model not in self.model_configs:
-            logger.warning(f"Unknown model {model}, using default config")
-            self.config = {"dimensions": 1536, "max_tokens": 8191}
+            logger.warning(f"Unknown model {model}, using default config (768 dims)")
+            self.config = {"dimensions": 768, "max_tokens": 8192}
         else:
             self.config = self.model_configs[model]
     

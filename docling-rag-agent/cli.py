@@ -20,6 +20,9 @@ from pydantic_ai import Agent, RunContext
 # Load environment variables
 load_dotenv(".env")
 
+# Import model configuration
+from utils.providers import get_llm_model
+
 logger = logging.getLogger(__name__)
 
 # ANSI color codes for better formatting
@@ -122,8 +125,9 @@ async def search_knowledge_base(ctx: RunContext[None], query: str, limit: int = 
 
 
 # Create the PydanticAI agent with the RAG tool
+llm_model = get_llm_model()
 agent = Agent(
-    'openai:gpt-4o-mini',
+    llm_model,
     system_prompt="""You are an intelligent knowledge assistant with access to an organization's documentation and information.
 Your role is to help users find accurate information from the knowledge base.
 You have a professional yet friendly demeanor.
@@ -378,8 +382,18 @@ def main():
     # Override model if specified
     if args.model:
         global agent
+        from pydantic_ai.models.openai import OpenAIModel
+        from pydantic_ai.providers.openai import OpenAIProvider
+
+        # Get base_url from env if using Ollama
+        base_url = os.getenv('OPENAI_BASE_URL')
+        kwargs = {'api_key': os.getenv('OPENAI_API_KEY')}
+        if base_url:
+            kwargs['base_url'] = base_url
+
+        override_model = OpenAIModel(args.model, provider=OpenAIProvider(**kwargs))
         agent = Agent(
-            f'openai:{args.model}',
+            override_model,
             system_prompt=agent.system_prompt,
             tools=[search_knowledge_base]
         )

@@ -22,26 +22,32 @@ def get_llm_model() -> OpenAIModel:
     """
     llm_choice = os.getenv('LLM_CHOICE', 'gpt-4.1-mini')
     api_key = os.getenv('OPENAI_API_KEY')
+    base_url = os.getenv('OPENAI_BASE_URL')
     
     if not api_key:
         raise ValueError("OPENAI_API_KEY environment variable is required")
     
-    return OpenAIModel(llm_choice, provider=OpenAIProvider(api_key=api_key))
+    return OpenAIModel(llm_choice, provider=OpenAIProvider(api_key=api_key, base_url=base_url))
 
 
 def get_embedding_client() -> openai.AsyncOpenAI:
     """
-    Get OpenAI client for embeddings.
-    
+    Get OpenAI client for embeddings (supports Ollama via OPENAI_BASE_URL).
+
     Returns:
         Configured OpenAI client for embeddings
     """
     api_key = os.getenv('OPENAI_API_KEY')
-    
+    base_url = os.getenv('OPENAI_BASE_URL')  # For Ollama: http://localhost:11434/v1
+
     if not api_key:
         raise ValueError("OPENAI_API_KEY environment variable is required")
-    
-    return openai.AsyncOpenAI(api_key=api_key)
+
+    kwargs = {'api_key': api_key}
+    if base_url:
+        kwargs['base_url'] = base_url
+
+    return openai.AsyncOpenAI(**kwargs)
 
 
 def get_embedding_model() -> str:

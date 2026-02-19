@@ -18,6 +18,9 @@ from pydantic_ai import Agent, RunContext
 # Load environment variables
 load_dotenv(".env")
 
+# Import model configuration
+from utils.providers import get_llm_model
+
 logger = logging.getLogger(__name__)
 
 # Global database pool
@@ -106,8 +109,9 @@ async def search_knowledge_base(ctx: RunContext[None], query: str, limit: int = 
 
 
 # Create the PydanticAI agent with the RAG tool
+llm_model = get_llm_model()
 agent = Agent(
-    'openai:gpt-4o.1-mini',
+    llm_model,
     system_prompt="""You are an intelligent knowledge assistant with access to an organization's documentation and information.
 Your role is to help users find accurate information from the knowledge base.
 You have a professional yet friendly demeanor.

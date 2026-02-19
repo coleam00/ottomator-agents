@@ -120,9 +120,11 @@ class Chunk(BaseModel):
     @field_validator('embedding')
     @classmethod
     def validate_embedding(cls, v: Optional[List[float]]) -> Optional[List[float]]:
-        """Validate embedding dimensions."""
-        if v is not None and len(v) != 1536:  # OpenAI text-embedding-3-small
-            raise ValueError(f"Embedding must have 1536 dimensions, got {len(v)}")
+        """Validate embedding dimensions. Supports multiple model sizes."""
+        if v is not None:
+            valid_dims = {768, 1536, 1024, 384, 4096}  # nomic, OpenAI, mxbai, minilm, qwen3
+            if len(v) not in valid_dims:
+                raise ValueError(f"Embedding dimensions must be one of {valid_dims}, got {len(v)}")
         return v
 
 

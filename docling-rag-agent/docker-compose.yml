@@ -7,7 +7,7 @@ services:
     container_name: rag_postgres
     environment:
       POSTGRES_USER: raguser
-      POSTGRES_PASSWORD: ragpass123
+      POSTGRES_PASSWORD: ragpass
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
@@ -30,7 +30,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://raguser:ragpass123@postgres:5432/postgres
+      DATABASE_URL: postgresql://raguser:ragpass@postgres:5432/postgres
       LIVEKIT_URL: ${LIVEKIT_URL}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
@@ -53,7 +53,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://raguser:ragpass123@postgres:5432/postgres
+      DATABASE_URL: postgresql://raguser:ragpass@postgres:5432/postgres
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       LLM_CHOICE: ${LLM_CHOICE:-gpt-4o-mini}
     volumes:

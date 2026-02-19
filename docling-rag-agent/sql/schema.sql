@@ -6,12 +6,13 @@ DROP TABLE IF EXISTS documents CASCADE;
 DROP INDEX IF EXISTS idx_chunks_embedding;
 DROP INDEX IF EXISTS idx_chunks_document_id;
 DROP INDEX IF EXISTS idx_documents_metadata;
+DROP FUNCTION IF EXISTS match_chunks(vector, integer);
 
 CREATE TABLE documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     source TEXT NOT NULL,
-    content TEXT NOT NULL,
+    content TEXT,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -24,19 +25,19 @@ CREATE TABLE chunks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
-    embedding vector(1536),
+    embedding vector(768),
     chunk_index INTEGER NOT NULL,
     metadata JSONB DEFAULT '{}',
     token_count INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_chunks_embedding ON chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 1);
+CREATE INDEX idx_chunks_embedding ON chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 CREATE INDEX idx_chunks_document_id ON chunks (document_id);
 CREATE INDEX idx_chunks_chunk_index ON chunks (document_id, chunk_index);
 
 CREATE OR REPLACE FUNCTION match_chunks(
-    query_embedding vector(1536),
+    query_embedding vector(768),
     match_count INT DEFAULT 10
 )
 RETURNS TABLE (
@@ -52,7 +53,7 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         c.id AS chunk_id,
         c.document_id,
         c.content,
